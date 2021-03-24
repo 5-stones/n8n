@@ -55,6 +55,15 @@ import {
 	IHistory,
 } from './IHistoryInterface';
 
+interface CustomProperty {
+	name: string;
+	value: string;
+}
+
+interface CustomPropertyList {
+	properties: CustomProperty[];
+}
+
 export class Xero implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'Xero',
@@ -789,10 +798,12 @@ export class Xero implements INodeType {
 				if (operation === 'get') {
 					const contactId = this.getNodeParameter('contactId', i) as string;
 					// Query String reference Get CreditNotes api documentation
-					const customProperties = this.getNodeParameter('customProperties', i, {}) as IDataObject;
+					const customProperties = this.getNodeParameter('customProperties', i, {}) as CustomPropertyList;
 
-					for (const property of customProperties['properties']) {
-						qs[property.name] = property.value;
+					if (customProperties['properties']) {
+						for (const property of customProperties['properties']) {
+							qs[property.name] = property.value;
+						}
 					}
 
 					responseData = await xeroApiRequest.call(this, 'GET', `/CreditNotes/${contactId}`, {}, qs);

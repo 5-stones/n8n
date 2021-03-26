@@ -419,6 +419,14 @@ export const invoiceFields = [
 						name: 'Authorised',
 						value: 'AUTHORISED',
 					},
+					{
+						name: 'Deleted',
+						value: 'DELETED',
+					},
+					{
+						name: 'Voided',
+						value: 'VOIDED',
+					},
 				],
 				default: 'DRAFT',
 			},
@@ -971,6 +979,14 @@ export const invoiceFields = [
 					{
 						name: 'Authorised',
 						value: 'AUTHORISED',
+					},
+					{
+						name: 'Deleted',
+						value: 'DELETED',
+					},
+					{
+						name: 'Voided',
+						value: 'VOIDED',
 					},
 				],
 				default: [],

@@ -42,9 +42,9 @@ import {
 } from './InvoiceInterface';
 
 import {
+	IAddress,
 	IContact,
-	// IPhone,
-	// IAddress,
+	IPhone,
 } from './IContactInterface';
 
 import {

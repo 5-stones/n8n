@@ -479,8 +479,8 @@ export class Xero implements INodeType {
 					const organizationId = this.getNodeParameter('organizationId', i) as string;
 					const name = this.getNodeParameter('name', i) as string;
 					const additionalFields = this.getNodeParameter('additionalFields', i) as IDataObject;
-					// const addressesUi = additionalFields.addressesUi as IDataObject;
-					// const phonesUi = additionalFields.phonesUi as IDataObject;
+					const addressesUi = additionalFields.addressesUi as IDataObject;
+					const phonesUi = additionalFields.phonesUi as IDataObject;
 
 					const body: IContact = {
 							Name: name,
@@ -538,41 +538,41 @@ export class Xero implements INodeType {
 						body.xeroNetworkKey = additionalFields.xeroNetworkKey as string;
 					}
 
-					// if (phonesUi) {
-					// 	const phoneValues = phonesUi?.phonesValues as IDataObject[];
-					// 	if (phoneValues) {
-					// 		const phones: IPhone[] = [];
-					// 		for (const phoneValue of phoneValues) {
-					// 			const phone: IPhone = {};
-					// 			phone.Type = phoneValue.type as string;
-					// 			phone.PhoneNumber = phoneValue.PhoneNumber as string;
-					// 			phone.PhoneAreaCode = phoneValue.phoneAreaCode as string;
-					// 			phone.PhoneCountryCode = phoneValue.phoneCountryCode as string;
-					// 			phones.push(phone);
-					// 		}
-					// 		body.Phones = phones;
-					// 	}
-					// }
+					if (phonesUi) {
+						const phoneValues = phonesUi?.phonesValues as IDataObject[];
+						if (phoneValues) {
+							const phones: IPhone[] = [];
+							for (const phoneValue of phoneValues) {
+								const phone: IPhone = {};
+								phone.Type = phoneValue.type as string;
+								phone.PhoneNumber = phoneValue.PhoneNumber as string;
+								phone.PhoneAreaCode = phoneValue.phoneAreaCode as string;
+								phone.PhoneCountryCode = phoneValue.phoneCountryCode as string;
+								phones.push(phone);
+							}
+							body.Phones = phones;
+						}
+					}
 
-					// if (addressesUi) {
-					// 	const addressValues = addressesUi?.addressesValues as IDataObject[];
-					// 	if (addressValues) {
-					// 		const addresses: IAddress[] = [];
-					// 		for (const addressValue of addressValues) {
-					// 			const address: IAddress = {};
-					// 			address.Type = addressValue.type as string;
-					// 			address.AddressLine1 = addressValue.line1 as string;
-					// 			address.AddressLine2 = addressValue.line2 as string;
-					// 			address.City = addressValue.city as string;
-					// 			address.Region = addressValue.region as string;
-					// 			address.PostalCode = addressValue.postalCode as string;
-					// 			address.Country = addressValue.country as string;
-					// 			address.AttentionTo = addressValue.attentionTo as string;
-					// 			addresses.push(address);
-					// 		}
-					// 		body.Addresses = addresses;
-					// 	}
-					// }
+					if (addressesUi) {
+						const addressValues = addressesUi?.addressesValues as IDataObject[];
+						if (addressValues) {
+							const addresses: IAddress[] = [];
+							for (const addressValue of addressValues) {
+								const address: IAddress = {};
+								address.Type = addressValue.type as string;
+								address.AddressLine1 = addressValue.line1 as string;
+								address.AddressLine2 = addressValue.line2 as string;
+								address.City = addressValue.city as string;
+								address.Region = addressValue.region as string;
+								address.PostalCode = addressValue.postalCode as string;
+								address.Country = addressValue.country as string;
+								address.AttentionTo = addressValue.attentionTo as string;
+								addresses.push(address);
+							}
+							body.Addresses = addresses;
+						}
+					}
 
 					responseData = await xeroApiRequest.call(this, 'POST', '/Contacts', { organizationId, Contacts: [body] });
 					responseData = responseData.Contacts;
@@ -610,8 +610,8 @@ export class Xero implements INodeType {
 					const organizationId = this.getNodeParameter('organizationId', i) as string;
 					const contactId = this.getNodeParameter('contactId', i) as string;
 					const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
-					// const addressesUi = updateFields.addressesUi as IDataObject;
-					// const phonesUi = updateFields.phonesUi as IDataObject;
+					const addressesUi = updateFields.addressesUi as IDataObject;
+					const phonesUi = updateFields.phonesUi as IDataObject;
 
 					const body: IContact = {};
 
@@ -671,41 +671,41 @@ export class Xero implements INodeType {
 						body.xeroNetworkKey = updateFields.xeroNetworkKey as string;
 					}
 
-					// if (phonesUi) {
-					// 	const phoneValues = phonesUi?.phonesValues as IDataObject[];
-					// 	if (phoneValues) {
-					// 		const phones: IPhone[] = [];
-					// 		for (const phoneValue of phoneValues) {
-					// 			const phone: IPhone = {};
-					// 			phone.Type = phoneValue.type as string;
-					// 			phone.PhoneNumber = phoneValue.PhoneNumber as string;
-					// 			phone.PhoneAreaCode = phoneValue.phoneAreaCode as string;
-					// 			phone.PhoneCountryCode = phoneValue.phoneCountryCode as string;
-					// 			phones.push(phone);
-					// 		}
-					// 		body.Phones = phones;
-					// 	}
-					// }
+					if (phonesUi) {
+						const phoneValues = phonesUi?.phonesValues as IDataObject[];
+						if (phoneValues) {
+							const phones: IPhone[] = [];
+							for (const phoneValue of phoneValues) {
+								const phone: IPhone = {};
+								phone.Type = phoneValue.type as string;
+								phone.PhoneNumber = phoneValue.PhoneNumber as string;
+								phone.PhoneAreaCode = phoneValue.phoneAreaCode as string;
+								phone.PhoneCountryCode = phoneValue.phoneCountryCode as string;
+								phones.push(phone);
+							}
+							body.Phones = phones;
+						}
+					}
 
-					// if (addressesUi) {
-					// 	const addressValues = addressesUi?.addressesValues as IDataObject[];
-					// 	if (addressValues) {
-					// 		const addresses: IAddress[] = [];
-					// 		for (const addressValue of addressValues) {
-					// 			const address: IAddress = {};
-					// 			address.Type = addressValue.type as string;
-					// 			address.AddressLine1 = addressValue.line1 as string;
-					// 			address.AddressLine2 = addressValue.line2 as string;
-					// 			address.City = addressValue.city as string;
-					// 			address.Region = addressValue.region as string;
-					// 			address.PostalCode = addressValue.postalCode as string;
-					// 			address.Country = addressValue.country as string;
-					// 			address.AttentionTo = addressValue.attentionTo as string;
-					// 			addresses.push(address);
-					// 		}
-					// 		body.Addresses = addresses;
-					// 	}
-					// }
+					if (addressesUi) {
+						const addressValues = addressesUi?.addressesValues as IDataObject[];
+						if (addressValues) {
+							const addresses: IAddress[] = [];
+							for (const addressValue of addressValues) {
+								const address: IAddress = {};
+								address.Type = addressValue.type as string;
+								address.AddressLine1 = addressValue.line1 as string;
+								address.AddressLine2 = addressValue.line2 as string;
+								address.City = addressValue.city as string;
+								address.Region = addressValue.region as string;
+								address.PostalCode = addressValue.postalCode as string;
+								address.Country = addressValue.country as string;
+								address.AttentionTo = addressValue.attentionTo as string;
+								addresses.push(address);
+							}
+							body.Addresses = addresses;
+						}
+					}
 
 					responseData = await xeroApiRequest.call(this, 'POST', `/Contacts/${contactId}`, { organizationId, Contacts: [body] });
 					responseData = responseData.Contacts;

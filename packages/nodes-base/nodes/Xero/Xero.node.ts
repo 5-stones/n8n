@@ -544,7 +544,7 @@ export class Xero implements INodeType {
 							const phones: IPhone[] = [];
 							for (const phoneValue of phoneValues) {
 								const phone: IPhone = {};
-								phone.Type = phoneValue.type as string;
+								phone.PhoneType = phoneValue.type as string;
 								phone.PhoneNumber = phoneValue.PhoneNumber as string;
 								phone.PhoneAreaCode = phoneValue.phoneAreaCode as string;
 								phone.PhoneCountryCode = phoneValue.phoneCountryCode as string;
@@ -560,7 +560,7 @@ export class Xero implements INodeType {
 							const addresses: IAddress[] = [];
 							for (const addressValue of addressValues) {
 								const address: IAddress = {};
-								address.Type = addressValue.type as string;
+								address.AddressType = addressValue.type as string;
 								address.AddressLine1 = addressValue.line1 as string;
 								address.AddressLine2 = addressValue.line2 as string;
 								address.City = addressValue.city as string;
@@ -677,7 +677,7 @@ export class Xero implements INodeType {
 							const phones: IPhone[] = [];
 							for (const phoneValue of phoneValues) {
 								const phone: IPhone = {};
-								phone.Type = phoneValue.type as string;
+								phone.PhoneType = phoneValue.type as string;
 								phone.PhoneNumber = phoneValue.PhoneNumber as string;
 								phone.PhoneAreaCode = phoneValue.phoneAreaCode as string;
 								phone.PhoneCountryCode = phoneValue.phoneCountryCode as string;
@@ -693,7 +693,7 @@ export class Xero implements INodeType {
 							const addresses: IAddress[] = [];
 							for (const addressValue of addressValues) {
 								const address: IAddress = {};
-								address.Type = addressValue.type as string;
+								address.AddressType = addressValue.type as string;
 								address.AddressLine1 = addressValue.line1 as string;
 								address.AddressLine2 = addressValue.line2 as string;
 								address.City = addressValue.city as string;

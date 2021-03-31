@@ -27,6 +27,11 @@ import {
 } from './ContactDescription';
 
 import {
+	contactGroupFields,
+	contactGroupOperations,
+} from './ContactGroupDescription';
+
+import {
 	creditNotesFields,
 	creditNotesOperations
 } from './CreditNotesDescription';
@@ -96,6 +101,10 @@ export class Xero implements INodeType {
 						value: 'contact',
 					},
 					{
+						name: 'Contact Group',
+						value: 'contactGroup',
+					},
+					{
 						name: 'Invoice',
 						value: 'invoice',
 					},
@@ -114,6 +123,9 @@ export class Xero implements INodeType {
 			// CONTACT
 			...contactOperations,
 			...contactFields,
+			// CONTACT GROUP
+			...contactGroupFields,
+			...contactGroupOperations,
 			// INVOICE
 			...invoiceOperations,
 			...invoiceFields,
@@ -710,6 +722,20 @@ export class Xero implements INodeType {
 					responseData = await xeroApiRequest.call(this, 'POST', `/Contacts/${contactId}`, { organizationId, Contacts: [body] });
 					responseData = responseData.Contacts;
 				}
+			}
+			if (resource === 'contactGroup') {
+				const name = this.getNodeParameter('name', i) as string;
+				let data;
+				if (operation === 'get') {
+					qs.where = `where=Name=="${name}"`;
+
+					data = await xeroApiRequest.call(this, 'GET', `/ContactGroups`, {}, qs);
+				}
+				if (operation === 'create') {
+					data = await xeroApiRequest.call(this, 'POST', `/ContactGroups`, { Name: name });
+				}
+
+				responseData = data.ContactGroups[0];
 			}
 			if (resource === 'credit_notes') {
 				if (operation === 'update') {

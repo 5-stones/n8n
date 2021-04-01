@@ -18,12 +18,17 @@ export const contactGroupOperations = [
 			{
 				name: 'Create',
 				value: 'create',
-				description: 'create a contact',
+				description: 'create a contact group',
 			},
 			{
 				name: 'Get',
 				value: 'get',
-				description: 'Get a contact',
+				description: 'Get a contact group',
+			},
+			{
+				name: 'Add Contact',
+				value: 'add',
+				description: 'Add a contact to a group',
 			},
 		],
 		default: 'create',
@@ -66,6 +71,41 @@ export const contactGroupFields = [
 				operation: [
 					'create',
 					'get',
+					'add',
+				],
+			},
+		},
+		required: true,
+	},
+	{
+		displayName: 'Contact ID',
+		name: 'contactId',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: [
+					'contactGroup',
+				],
+				operation: [
+					'add',
+				],
+			},
+		},
+		required: true,
+	},
+	{
+		displayName: 'Contact Group ID',
+		name: 'contactGroupId',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: [
+					'contactGroup',
+				],
+				operation: [
+					'add',
 				],
 			},
 		},

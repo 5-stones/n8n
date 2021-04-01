@@ -728,7 +728,7 @@ export class Xero implements INodeType {
 				const organizationId = this.getNodeParameter('organizationId', i) as string;
 				let data;
 				if (operation === 'get') {
-					qs.where = `where=Name=="${name}"`;
+					qs.where = `Name=="${name}"`;
 
 					data = await xeroApiRequest.call(this, 'GET', `/ContactGroups`, { organizationId }, qs);
 				}

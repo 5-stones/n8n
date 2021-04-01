@@ -731,10 +731,12 @@ export class Xero implements INodeType {
 					qs.where = `Name=="${name}"`;
 
 					data = await xeroApiRequest.call(this, 'GET', `/ContactGroups`, { organizationId }, qs);
+					responseData = data.ContactGroups[0];
 				}
 				if (operation === 'create') {
 					const name = this.getNodeParameter('name', i) as string;
 					data = await xeroApiRequest.call(this, 'POST', `/ContactGroups`, { organizationId, Name: name });
+					responseData = data.ContactGroups[0];
 				}
 				if (operation === 'add') {
 					const contactId = this.getNodeParameter('contactId', i) as string;
@@ -750,9 +752,8 @@ export class Xero implements INodeType {
 					};
 
 					data = await xeroApiRequest.call(this, 'PUT', `/ContactGroups/${contactGroupId}/Contacts`, body);
+					responseData = data;
 				}
-
-				responseData = data.ContactGroups[0];
 			}
 			if (resource === 'credit_notes') {
 				if (operation === 'update') {

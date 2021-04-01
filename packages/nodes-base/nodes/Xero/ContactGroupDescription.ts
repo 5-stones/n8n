@@ -50,4 +50,25 @@ export const contactGroupFields = [
 		},
 		required: true,
 	},
+	{
+		displayName: 'Organization ID',
+		name: 'organizationId',
+		type: 'options',
+		typeOptions: {
+			loadOptionsMethod: 'getTenants',
+		},
+		default: '',
+		displayOptions: {
+			show: {
+				resource: [
+					'contactGroup',
+				],
+				operation: [
+					'create',
+					'get',
+				],
+			},
+		},
+		required: true,
+	},
 ] as INodeProperties[];

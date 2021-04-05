@@ -719,7 +719,7 @@ export class Xero implements INodeType {
 						}
 					}
 
-					responseData = await xeroApiRequest.call(this, 'POST', `/Contacts/${contactId}`, { organizationId, Contacts: [body] });
+					responseData = await xeroApiRequest.call(this, 'POST', `/Contacts/${contactId}`, { organizationId, ...body });
 					responseData = responseData.Contacts;
 				}
 			}

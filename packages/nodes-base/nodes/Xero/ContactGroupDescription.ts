@@ -30,6 +30,11 @@ export const contactGroupOperations = [
 				value: 'add',
 				description: 'Add a contact to a group',
 			},
+			{
+				name: 'Remove Contact',
+				value: 'remove_contact',
+				description: 'Remove Contact from Group',
+			},
 		],
 		default: 'create',
 		description: 'The operation to perform.',
@@ -106,9 +111,26 @@ export const contactGroupFields = [
 				],
 				operation: [
 					'add',
+					'remove_contact',
 				],
 			},
 		},
 		required: true,
+	},
+	{
+		displayName: 'Contact ID',
+		name: 'contactId',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: [
+					'contactGroup',
+				],
+				operation: [
+					'remove_contact',
+				],
+			},
+		},
 	},
 ] as INodeProperties[];

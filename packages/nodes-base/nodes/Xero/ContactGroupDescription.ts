@@ -77,6 +77,7 @@ export const contactGroupFields = [
 					'create',
 					'get',
 					'add',
+					'remove_contact',
 				],
 			},
 		},

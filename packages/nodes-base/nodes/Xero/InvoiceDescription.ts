@@ -115,7 +115,7 @@ export const invoiceFields = [
 		description: 'Contact ID',
 	},
 	{
-		description: 'Line Items Array (JSON)',
+		displayName: 'Line Items Array (JSON)',
 		name: 'lineItemsUiArray',
 		type: 'json',
 		default: '',

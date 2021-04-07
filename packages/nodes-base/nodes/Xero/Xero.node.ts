@@ -758,8 +758,8 @@ export class Xero implements INodeType {
 					const groupId = this.getNodeParameter('contactGroupId', i) as string;
 					const customerId = this.getNodeParameter('contactId', i) as string;
 					const path = customerId ? `/ContactGroups/${groupId}/Contacts/${customerId}` : `/ContactGroups/${groupId}`;
-					data = await xeroApiRequest.call(this, 'DELETE', path);
-					responseData = data.ContactGroups[0];
+					data = await xeroApiRequest.call(this, 'DELETE', path, {organizationId});
+					responseData = data;
 				}
 			}
 			if (resource === 'credit_notes') {

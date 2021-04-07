@@ -774,7 +774,7 @@ export class Xero implements INodeType {
 					};
 
 					if (updateFields.lineItemsUiArray) {
-						const lineItemsArray = (updateFields.lineItemsUiArray as IDataObject) as IDataObject[];
+						const lineItemsArray = updateFields.lineItemsUiArray as IDataObject[];
 						if (lineItemsArray) {
 							const lineItems: ILineItem[] = [];
 							for (const lineItemValue of lineItemsArray) {

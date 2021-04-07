@@ -773,6 +773,30 @@ export class Xero implements INodeType {
 						organizationId,
 					};
 
+					if (updateFields.lineItemsUiArray) {
+						const lineItemsArray = (updateFields.lineItemsUiArray as IDataObject) as IDataObject[];
+						if (lineItemsArray) {
+							const lineItems: ILineItem[] = [];
+							for (const lineItemValue of lineItemsArray) {
+								const lineItem: ILineItem = {
+									Tracking: [],
+								};
+								lineItem.AccountCode = lineItemValue.accountCode as string;
+								lineItem.Description = lineItemValue.description as string;
+								lineItem.DiscountRate = lineItemValue.discountRate as string;
+								lineItem.ItemCode = lineItemValue.itemCode as string;
+								lineItem.LineAmount = lineItemValue.lineAmount as string;
+								lineItem.Quantity = (lineItemValue.quantity as number).toString();
+								lineItem.TaxAmount = lineItemValue.taxAmount as string;
+								lineItem.TaxType = lineItemValue.taxType as string;
+								lineItem.UnitAmount = lineItemValue.unitAmount as string;
+
+								lineItems.push(lineItem);
+							}
+							body.LineItems = lineItems;
+						}
+					}
+
 
 					if (updateFields.lineItemsUi) {
 						const lineItemsValues = (updateFields.lineItemsUi as IDataObject).lineItemsValues as IDataObject[];

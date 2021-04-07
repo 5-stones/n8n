@@ -115,6 +115,23 @@ export const invoiceFields = [
 		description: 'Contact ID',
 	},
 	{
+		description: 'Line Items Array (JSON)',
+		name: 'lineItemsUiArray',
+		type: 'json',
+		default: '',
+		description: 'array of line items(indetermined size)',
+		displayOptions: {
+			show: {
+				resource: [
+					'invoice',
+				],
+				operation: [
+					'create',
+				],
+			},
+		},
+	},
+	{
 		displayName: 'Line Items',
 		name: 'lineItemsUi',
 		placeholder: 'Add Line Item',

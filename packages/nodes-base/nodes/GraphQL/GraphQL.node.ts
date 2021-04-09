@@ -23,7 +23,37 @@ export class GraphQL implements INodeType {
 		},
 		inputs: ['main'],
 		outputs: ['main'],
+		credentials: [
+			{
+				name: 'httpHeaderAuth',
+				required: true,
+				displayOptions: {
+					show: {
+						authentication: [
+							'headerAuth',
+						],
+					},
+				},
+			},
+		],
 		properties: [
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				options: [
+					{
+						name: 'Header Auth',
+						value: 'headerAuth',
+					},
+					{
+						name: 'None',
+						value: 'none',
+					},
+				],
+				default: 'none',
+				description: 'The way to authenticate.',
+			},
 			{
 				displayName: 'HTTP Request Method',
 				name: 'requestMethod',
@@ -198,6 +228,7 @@ export class GraphQL implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 
 		const items = this.getInputData();
+		const httpHeaderAuth = this.getCredentials('httpHeaderAuth');
 
 		let requestOptions: OptionsWithUri & RequestPromiseOptions;
 
@@ -225,6 +256,11 @@ export class GraphQL implements INodeType {
 				simple: false,
 				rejectUnauthorized: !this.getNodeParameter('allowUnauthorizedCerts', itemIndex, false) as boolean,
 			};
+
+			// Add credentials if any are set
+			if (httpHeaderAuth !== undefined) {
+				requestOptions.headers![httpHeaderAuth.name as string] = httpHeaderAuth.value;
+			}
 
 			const gqlQuery = this.getNodeParameter('query', itemIndex, '') as string;
 			if (requestMethod === 'GET') {

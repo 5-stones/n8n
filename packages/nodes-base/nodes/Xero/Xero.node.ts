@@ -285,7 +285,7 @@ export class Xero implements INodeType {
 						const lineItems: ILineItem[] = [];
 						for (const lineItemValue of lineItemsArray) {
 							const lineItem: ILineItem = {
-								Tracking: [],
+								Tracking: lineItemValue.tracking as IDataObject[],
 							};
 							lineItem.AccountCode = lineItemValue.accountCode as string;
 							lineItem.Description = lineItemValue.description as string;
@@ -395,7 +395,7 @@ export class Xero implements INodeType {
 							const lineItems: ILineItem[] = [];
 							for (const lineItemValue of lineItemsArray) {
 								const lineItem: ILineItem = {
-									Tracking: [],
+									Tracking: lineItemValue.tracking as IDataObject[],
 								};
 								lineItem.AccountCode = lineItemValue.accountCode as string;
 								lineItem.Description = lineItemValue.description as string;

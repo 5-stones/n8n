@@ -289,6 +289,7 @@ export class Xero implements INodeType {
 							};
 							lineItem.AccountCode = lineItemValue.accountCode as string;
 							lineItem.Description = lineItemValue.description as string;
+							lineItem.DiscountAmount = lineItemValue.discountAmount as string;
 							lineItem.DiscountRate = lineItemValue.discountRate as string;
 							lineItem.ItemCode = lineItemValue.itemCode as string;
 							lineItem.LineAmount = lineItemValue.lineAmount as string;
@@ -399,6 +400,7 @@ export class Xero implements INodeType {
 								};
 								lineItem.AccountCode = lineItemValue.accountCode as string;
 								lineItem.Description = lineItemValue.description as string;
+								lineItem.DiscountAmount = lineItemValue.discountAmount as string;
 								lineItem.DiscountRate = lineItemValue.discountRate as string;
 								lineItem.ItemCode = lineItemValue.itemCode as string;
 								lineItem.LineAmount = lineItemValue.lineAmount as string;

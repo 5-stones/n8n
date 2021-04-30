@@ -1019,6 +1019,17 @@ export const invoiceFields = [
 				default: '',
 				description: `The where parameter allows you to filter on endpoints and elements that don't have explicit parameters. <a href="https://developer.xero.com/documentation/api/requests-and-responses#get-modified" target="_blank">Examples Here</a>`,
 			},
+			{
+				displayName: 'Invoice Numbers',
+				name: 'invoiceNumbers',
+				type: 'string',
+				typeOptions: {
+					alwaysOpenEditWindow: true,
+				},
+				placeholder: 'INV001,INV002,...',
+				default: '',
+				description: `List of invoice numbers to get`,
+			},
 		],
 	},
 ] as INodeProperties[];

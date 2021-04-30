@@ -27,6 +27,11 @@ import {
 } from './ContactDescription';
 
 import {
+	paymentFields,
+	paymentOperations,
+} from './PaymentDescription';
+
+import {
 	contactGroupFields,
 	contactGroupOperations,
 } from './ContactGroupDescription';
@@ -116,6 +121,10 @@ export class Xero implements INodeType {
 						name: 'History and Notes',
 						value: 'history_and_notes',
 					},
+					{
+						name: 'Payment',
+						value: 'payment',
+					},
 				],
 				default: 'invoice',
 				description: 'Resource to consume.',
@@ -135,6 +144,9 @@ export class Xero implements INodeType {
 			// HISTORY AND NOTES
 			...historyAndNotesOperations,
 			...historyAndNotesFields,
+			// PAYMENT
+			...paymentOperations,
+			...paymentFields,
 		],
 	};
 
@@ -164,7 +176,7 @@ export class Xero implements INodeType {
 				const { Accounts: accounts } = await xeroApiRequest.call(this, 'GET', '/Accounts', { organizationId });
 				for (const account of accounts) {
 					const accountName = account.Name;
-					const accountId = account.Code;
+					const accountId = account.AccountID;
 					returnData.push({
 						name: accountName,
 						value: accountId,
@@ -524,13 +536,22 @@ export class Xero implements INodeType {
 					if (options.createdByMyApp) {
 						qs.createdByMyApp = options.createdByMyApp as boolean;
 					}
+					if (options.invoiceNumbers) {
+						qs.invoiceNumbers = options.invoiceNumbers;
+					}
 					if (returnAll) {
 						responseData = await xeroApiRequestAllItems.call(this, 'Invoices', 'GET', '/Invoices', { organizationId }, qs);
+						responseData = {
+							data: responseData,
+						};
 					} else {
 						const limit = this.getNodeParameter('limit', i) as number;
 						responseData = await xeroApiRequest.call(this, 'GET', `/Invoices`, { organizationId }, qs);
 						responseData = responseData.Invoices;
 						responseData = responseData.splice(0, limit);
+						responseData = {
+							data: responseData,
+						};
 					}
 				}
 			}
@@ -769,6 +790,31 @@ export class Xero implements INodeType {
 
 					responseData = await xeroApiRequest.call(this, 'POST', `/Contacts/${contactId}`, { organizationId, ...body });
 					responseData = responseData.Contacts;
+				}
+			}
+			if (resource === 'payment') {
+				const organizationId = this.getNodeParameter('organizationId', i) as string;
+				let data;
+
+				if (operation === 'createBatch') {
+					const dateNow = new Date();
+					const date = `${dateNow.getMonth() + 1}-${dateNow.getDate()}-${dateNow.getFullYear()}`;
+					const reference = this.getNodeParameter('reference', i) as string;
+					const account = this.getNodeParameter('account', i) as IDataObject;
+					const payments = this.getNodeParameter('payments', i) as IDataObject[];
+
+					const body = {
+						organizationId,
+						Date: date,
+						Reference: reference,
+						Account: {
+							AccountID: account,
+						},
+						Payments: payments,
+					};
+
+					data = await xeroApiRequest.call(this, 'PUT', `/BatchPayments`, body);
+					responseData = data;
 				}
 			}
 			if (resource === 'contactGroup') {

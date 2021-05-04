@@ -13,24 +13,29 @@ import {
 } from 'n8n-workflow';
 
 export async function xeroApiRequest(this: IExecuteFunctions | IExecuteSingleFunctions | ILoadOptionsFunctions, method: string, resource: string, body: any = {}, qs: IDataObject = {}, uri?: string, headers: IDataObject = {}): Promise<any> { // tslint:disable-line:no-any
+	// when this function is called in loops with multiple items, deleting the organizationId from the body
+	// causes authentication errors, but keeping it in the body causes errors when creating a contact (or other such one-off requests).
+	// this ensures the organizationId is preserved, and also kept out of the body of the request
+	const { organizationId, ...bodyCopy } = body;
+
 	const options: OptionsWithUri = {
 		headers: {
 			'Content-Type': 'application/json',
 		},
 		method,
-		body,
+		body: bodyCopy,
 		qs,
 		uri: uri || `https://api.xero.com/api.xro/2.0${resource}`,
 		json: true,
 	};
 	try {
-		if (body.organizationId) {
-			options.headers = { ...options.headers, 'Xero-tenant-id': body.organizationId };
+		if (organizationId) {
+			options.headers = { ...options.headers, 'Xero-tenant-id': organizationId };
 		}
 		if (Object.keys(headers).length !== 0) {
 			options.headers = Object.assign({}, options.headers, headers);
 		}
-		if (Object.keys(body).length === 0) {
+		if (Object.keys(bodyCopy).length === 0) {
 			delete options.body;
 		}
 		//@ts-ignore

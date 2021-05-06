@@ -857,17 +857,20 @@ export class Xero implements INodeType {
 				}
 			}
 			if (resource === 'credit_notes') {
-				if (operation === 'update') {
-					const contactId = this.getNodeParameter('contactId', i) as string;
+				if (operation === 'create') {
 					const updateFields = this.getNodeParameter('updateFields', i) as IDataObject;
 					const organizationId = this.getNodeParameter('organizationId', i) as string;
 					const amount = this.getNodeParameter('amount', i) as number;
+					const lineItemsArray = this.getNodeParameter('lineItemsUiArray', i) as IDataObject[];
+					const contactId = updateFields.contactId;
 
 					const body: ICreditNotes = {
 						organizationId,
 					};
 
-					if (updateFields.lineItemsUi) {
+					if (lineItemsArray) {
+						body.LineItems = lineItemsArray;
+					} else if (updateFields.lineItemsUi) {
 						const lineItemsValues = (updateFields.lineItemsUi as IDataObject).lineItemsValues as IDataObject[];
 						if (lineItemsValues) {
 							const lineItems: ILineItem[] = [];
@@ -905,8 +908,8 @@ export class Xero implements INodeType {
 					if (updateFields.type) {
 						body.Type = updateFields.type as string;
 					}
-					if (updateFields.Contact) {
-						body.Contact =  { ContactId: updateFields.contactId as string };
+					if (contactId) {
+						body.Contact =  { ContactId: contactId as string };
 					}
 					if (updateFields.currency) {
 						body.CurrencyCode = updateFields.currency as string;
@@ -915,10 +918,10 @@ export class Xero implements INodeType {
 						body.CurrencyRate = updateFields.currencyRate as string;
 					}
 					if (updateFields.date) {
-						body.Date = updateFields.date as string;
+						body.Date = (updateFields.date as string).substring(0, 10);
 					}
 					if (updateFields.InvoiceID) {
-						body.InvoiceID = updateFields.InvoiceID as string;
+						body.Invoice = {InvoiceID: updateFields.InvoiceID as string};
 					}
 					if (updateFields.lineAmountTypes) {
 						body.LineAmountTypes = updateFields.lineAmountTypes as string;
@@ -932,17 +935,20 @@ export class Xero implements INodeType {
 					if (updateFields.status) {
 						body.Status = updateFields.status as string;
 					}
+					if (updateFields.creditNoteNumber) {
+						body.CreditNoteNumber = updateFields.creditNoteNumber as string;
+					}
 					if (amount) {
 						body.Amount = amount as number;
 					}
 
-					responseData = await xeroApiRequest.call(this, 'PUT', `/CreditNotes/${contactId}/Allocations`, body);
-					responseData = responseData.Invoices;
+					responseData = await xeroApiRequest.call(this, 'POST', `/CreditNotes`, body);
+					responseData = responseData.CreditNotes;
 				}
 				if (operation === 'get') {
-					const contactId = this.getNodeParameter('contactId', i) as string;
 					// Query String reference Get CreditNotes api documentation
 					const customProperties = this.getNodeParameter('customProperties', i, {}) as CustomPropertyList;
+					const organizationId = this.getNodeParameter('organizationId', i) as string;
 
 					if (customProperties['properties']) {
 						for (const property of customProperties['properties']) {
@@ -950,8 +956,24 @@ export class Xero implements INodeType {
 						}
 					}
 
-					responseData = await xeroApiRequest.call(this, 'GET', `/CreditNotes/${contactId}`, {}, qs);
-					responseData = responseData.Invoices;
+					responseData = await xeroApiRequest.call(this, 'GET', `/CreditNotes/${qs.where}`, {organizationId});
+					responseData = {CreditNotes: responseData.CreditNotes };
+				}
+				if (operation === 'allocate') {
+					const invoiceID = this.getNodeParameter('InvoiceID', i) as string;
+					const amount = this.getNodeParameter('amount', i) as number;
+					const creditNoteID = this.getNodeParameter('creditNoteID', i) as string;
+					const organizationId = this.getNodeParameter('organizationId', i) as string;
+
+					const body: ICreditNotes = {
+						organizationId,
+						Amount: amount,
+						Invoice: {
+							InvoiceID: invoiceID,
+						},
+					};
+
+					responseData = await xeroApiRequest.call(this, 'PUT', `/CreditNotes/${creditNoteID}/Allocations`, body);
 				}
 			}
 			if (resource === 'history_and_notes') {

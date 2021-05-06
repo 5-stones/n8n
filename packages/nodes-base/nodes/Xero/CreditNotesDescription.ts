@@ -18,15 +18,20 @@ export const creditNotesOperations = [
 			{
 				name: 'Get',
 				value: 'get',
-				description: 'Get a invoice',
+				description: 'Get a credit note',
 			},
 			{
-				name: 'Update',
-				value: 'update',
-				description: 'Update a invoice',
+				name: 'Create',
+				value: 'create',
+				description: 'Create a credit note',
+			},
+			{
+				name: 'Allocate',
+				value: 'allocate',
+				description: 'Allocate a credit note',
 			},
 		],
-		default: 'update',
+		default: 'create',
 		description: 'The operation to perform.',
 	},
 ] as INodeProperties[];
@@ -47,27 +52,50 @@ export const creditNotesFields = [
 				],
 				operation: [
 					'get',
-					'update',
+					'create',
+					'allocate',
 				],
 			},
 		},
 		required: true,
 	},
 /* -------------------------------------------------------------------------- */
-/*                                credit notes:update                              */
+/*                                credit notes:create                              */
 /* -------------------------------------------------------------------------- */
 	{
 		displayName: 'Amount',
 		name: 'amount',
 		type: 'number',
 		default: 0,
+		typeOptions: {
+			numberPrecision: 2,
+			numberStepSize: 0.01,
+		},
 		displayOptions: {
 			show: {
 				resource: [
 					'credit_notes',
 				],
 				operation: [
-					'update',
+					'create',
+					'allocate',
+				],
+			},
+		},
+	},
+	{
+		displayName: 'Line Items Array (JSON)',
+		name: 'lineItemsUiArray',
+		type: 'json',
+		default: '',
+		description: 'array of line items(indetermined size)',
+		displayOptions: {
+			show: {
+				resource: [
+					'credit_notes',
+				],
+				operation: [
+					'create',
 				],
 			},
 		},
@@ -84,7 +112,7 @@ export const creditNotesFields = [
 					'credit_notes',
 				],
 				operation: [
-					'update',
+					'create',
 				],
 			},
 		},
@@ -107,6 +135,20 @@ export const creditNotesFields = [
 				type: 'string',
 				default: '',
 				description: 'Contact ID',
+			},
+			{
+				displayName: 'Type',
+				name: 'type',
+				type: 'string',
+				default: 'ACCRECCREDIT',
+				description: 'Type',
+			},
+			{
+				displayName: 'Credit Note Number',
+				name: 'creditNoteNumber',
+				type: 'string',
+				default: '',
+				description: 'Credit Note Number',
 			},
 			{
 				displayName: 'Currency',
@@ -373,7 +415,7 @@ export const creditNotesFields = [
 		],
 	},
 /* -------------------------------------------------------------------------- */
-/*                                 credit notes:get                                */
+/*                                 credit notes:get                           */
 /* -------------------------------------------------------------------------- */
 	{
 			displayName: 'Custom Properties',
@@ -417,5 +459,40 @@ export const creditNotesFields = [
 							],
 					},
 			],
+	},
+	/* -------------------------------------------------------------------------- */
+	/*                                 credit notes:allocate                      */
+	/* -------------------------------------------------------------------------- */
+	{
+		displayName: 'Invoice ID',
+		name: 'InvoiceID',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: [
+					'credit_notes',
+				],
+				operation: [
+					'allocate',
+				],
+			},
+		},
+	},
+	{
+		displayName: 'Credit Note ID',
+		name: 'creditNoteID',
+		type: 'string',
+		default: '',
+		displayOptions: {
+			show: {
+				resource: [
+					'credit_notes',
+				],
+				operation: [
+					'allocate',
+				],
+			},
+		},
 	},
 ] as INodeProperties[];

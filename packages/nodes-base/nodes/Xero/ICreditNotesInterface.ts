@@ -2,7 +2,7 @@ import { ITenantId, IContact } from './IContactInterface';
 import { ILineItem } from './InvoiceInterface';
 
 export interface ICreditNotes extends ITenantId {
-	InvoiceID?: string;
+	Invoice?: { InvoiceID: string};
 	Type?: string;
 	Contact?: IContact;
 	Date?: string;

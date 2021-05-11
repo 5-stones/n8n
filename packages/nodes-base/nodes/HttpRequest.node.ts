@@ -863,6 +863,7 @@ export class HttpRequest implements INodeType {
 				}
 			}
 
+
 			// Now that the options are all set make the actual http request
 			if (oAuth1Api !== undefined) {
 				requestPromises.push(this.helpers.requestOAuth1.call(this, 'oAuth1Api', requestOptions));
@@ -897,6 +898,7 @@ export class HttpRequest implements INodeType {
 					continue;
 				}
 			}
+
 
 			response = response.value;
 
@@ -949,7 +951,7 @@ export class HttpRequest implements INodeType {
 					const returnItem: IDataObject = {};
 					for (const property of fullReponseProperties) {
 						if (property === 'body') {
-							returnItem[dataPropertyName] = response![property];
+							returnItem[dataPropertyName] = response![property].replace(/^\uFEFF/gm, '');
 							continue;
 						}
 
@@ -959,7 +961,7 @@ export class HttpRequest implements INodeType {
 				} else {
 					returnItems.push({
 						json: {
-							[dataPropertyName]: response,
+							[dataPropertyName]: response.replace(/^\uFEFF/gm, ''),
 						},
 					});
 				}
@@ -973,27 +975,24 @@ export class HttpRequest implements INodeType {
 
 					if (responseFormat === 'json' && typeof returnItem.body === 'string') {
 						try {
-							returnItem.body = JSON.parse(returnItem.body);
+							returnItem.body = JSON.parse(returnItem.body.replace(/^\uFEFF/gm, ''));
 						} catch (e) {
 							throw new Error('Response body is not valid JSON. Change "Response Format" to "String"');
 						}
 					}
-
 					returnItems.push({ json: returnItem });
 				} else {
 					if (responseFormat === 'json' && typeof response === 'string') {
 						try {
-							response = JSON.parse(response);
+							response = JSON.parse(response.replace(/^\uFEFF/gm, ''));
 						} catch (e) {
 							throw new Error('Response body is not valid JSON. Change "Response Format" to "String"');
 						}
 					}
-
 					returnItems.push({ json: response });
 				}
 			}
 		}
-
 		return this.prepareOutputData(returnItems);
 	}
 }

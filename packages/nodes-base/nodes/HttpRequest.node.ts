@@ -603,6 +603,8 @@ export class HttpRequest implements INodeType {
 
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+		console.log('EXECUTE HTTP');
+		try {
 		const items = this.getInputData();
 
 		const fullReponseProperties = [
@@ -863,6 +865,8 @@ export class HttpRequest implements INodeType {
 				}
 			}
 
+			console.log('REQUEST OPTIONS: ', 	JSON.stringify(requestOptions));
+
 			// Now that the options are all set make the actual http request
 			if (oAuth1Api !== undefined) {
 				requestPromises.push(this.helpers.requestOAuth1.call(this, 'oAuth1Api', requestOptions));
@@ -873,8 +877,10 @@ export class HttpRequest implements INodeType {
 			}
 		}
 
+		console.log('SETTLING PROMISES');
 		// @ts-ignore
 		const promisesResponses = await Promise.allSettled(requestPromises);
+		console.log('PROMISE RESPONSES: ', JSON.stringify(promisesResponses));
 
 		let response: any; // tslint:disable-line:no-any
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
@@ -897,6 +903,8 @@ export class HttpRequest implements INodeType {
 					continue;
 				}
 			}
+
+			console.log('RESPONSE: ', JSON.stringify(response));
 
 			response = response.value;
 
@@ -948,18 +956,22 @@ export class HttpRequest implements INodeType {
 				if (fullResponse === true) {
 					const returnItem: IDataObject = {};
 					for (const property of fullReponseProperties) {
+						console.log('PROPERTY: ', property);
+						console.log('RESPONSE PROPERTY: ', response![property]);
 						if (property === 'body') {
-							returnItem[dataPropertyName] = response![property];
+							returnItem[dataPropertyName] = response![property].replace(/^\uFEFF/gm, '');
 							continue;
 						}
 
 						returnItem[property] = response![property];
 					}
+					console.log('PUSH RETURN ITEM: ', returnItem);
 					returnItems.push({ json: returnItem });
 				} else {
+					console.log('PUSH RETURN ITEM: ', response);
 					returnItems.push({
 						json: {
-							[dataPropertyName]: response,
+							[dataPropertyName]: response.replace(/^\uFEFF/gm, ''),
 						},
 					});
 				}
@@ -968,32 +980,40 @@ export class HttpRequest implements INodeType {
 				if (fullResponse === true) {
 					const returnItem: IDataObject = {};
 					for (const property of fullReponseProperties) {
+						console.log('PROPERTY: ', property);
+						console.log('RESPONSE PROPERTY: ', response![property]);
 						returnItem[property] = response![property];
 					}
 
 					if (responseFormat === 'json' && typeof returnItem.body === 'string') {
 						try {
-							returnItem.body = JSON.parse(returnItem.body);
+							console.log('PARSING JSON');
+							returnItem.body = JSON.parse(returnItem.body.replace(/^\uFEFF/gm, ''));
 						} catch (e) {
 							throw new Error('Response body is not valid JSON. Change "Response Format" to "String"');
 						}
 					}
-
+					console.log('PUSH RETURN ITEM: ', returnItem);
 					returnItems.push({ json: returnItem });
 				} else {
 					if (responseFormat === 'json' && typeof response === 'string') {
 						try {
-							response = JSON.parse(response);
+							console.log('PARSING JSON');
+							response = JSON.parse(response.replace(/^\uFEFF/gm, ''));
 						} catch (e) {
 							throw new Error('Response body is not valid JSON. Change "Response Format" to "String"');
 						}
 					}
-
+					console.log('PUSH RETURN ITEM: ', response);
 					returnItems.push({ json: response });
 				}
 			}
 		}
-
+		console.log('RETURN ITEMS: ', returnItems);
 		return this.prepareOutputData(returnItems);
+	} catch(e) {
+		console.log('ERROR: ', JSON.stringify(e));
+		throw e;
+	}
 	}
 }

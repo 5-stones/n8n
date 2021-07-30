@@ -116,7 +116,7 @@
         "sqlite3": "^5.0.1",
         "sse-channel": "^3.1.1",
         "tslib": "1.11.2",
-        "typeorm": "^0.2.30"
+        "typeorm": "0.2.30"
     },
     "jest": {
         "transform": {

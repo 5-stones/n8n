@@ -17,10 +17,11 @@ import {
 	IWorkflowExecuteAdditionalData,
 	WebhookHttpMethod,
 	Workflow,
+	WorkflowActivateMode,
 	WorkflowExecuteMode,
 } from 'n8n-workflow';
 
-
+const WEBHOOK_TEST_UNREGISTERED_HINT = `Click the 'Execute workflow' button on the canvas, then try again. (In test mode, the webhook only works for one call after you click this button)`;
 
 export class TestWebhooks {
 
@@ -71,7 +72,7 @@ export class TestWebhooks {
 			webhookData = this.activeWebhooks!.get(httpMethod, pathElements.join('/'), webhookId);
 			if (webhookData === undefined) {
 				// The requested webhook is not registered
-				throw new ResponseHelper.ResponseError(`The requested webhook "${httpMethod} ${path}" is not registered.`, 404, 404);
+				throw new ResponseHelper.ResponseError(`The requested webhook "${httpMethod} ${path}" is not registered.`, 404, 404, WEBHOOK_TEST_UNREGISTERED_HINT);
 			}
 
 			path = webhookData.path;
@@ -89,7 +90,7 @@ export class TestWebhooks {
 		// TODO: Clean that duplication up one day and improve code generally
 		if (this.testWebhookData[webhookKey] === undefined) {
 			// The requested webhook is not registered
-			throw new ResponseHelper.ResponseError(`The requested webhook "${httpMethod} ${path}" is not registered.`, 404, 404);
+			throw new ResponseHelper.ResponseError(`The requested webhook "${httpMethod} ${path}" is not registered.`, 404, 404, WEBHOOK_TEST_UNREGISTERED_HINT);
 		}
 
 		const workflow = this.testWebhookData[webhookKey].workflow;
@@ -144,7 +145,7 @@ export class TestWebhooks {
 
 		if (webhookMethods === undefined) {
 			// The requested webhook is not registered
-			throw new ResponseHelper.ResponseError(`The requested webhook "${path}" is not registered.`, 404, 404);
+			throw new ResponseHelper.ResponseError(`The requested webhook "${path}" is not registered.`, 404, 404, WEBHOOK_TEST_UNREGISTERED_HINT);
 		}
 
 		return webhookMethods;
@@ -161,7 +162,7 @@ export class TestWebhooks {
 	 * @returns {(Promise<IExecutionDb | undefined>)}
 	 * @memberof TestWebhooks
 	 */
-	async needsWebhookData(workflowData: IWorkflowDb, workflow: Workflow, additionalData: IWorkflowExecuteAdditionalData, mode: WorkflowExecuteMode, sessionId?: string, destinationNode?: string): Promise<boolean> {
+	async needsWebhookData(workflowData: IWorkflowDb, workflow: Workflow, additionalData: IWorkflowExecuteAdditionalData, mode: WorkflowExecuteMode, activation: WorkflowActivateMode, sessionId?: string, destinationNode?: string): Promise<boolean> {
 		const webhooks = WebhookHelpers.getWorkflowWebhooks(workflow, additionalData, destinationNode);
 
 		if (webhooks.length === 0) {
@@ -193,7 +194,7 @@ export class TestWebhooks {
 			};
 
 			try {
-				await this.activeWebhooks!.add(workflow, webhookData, mode);
+				await this.activeWebhooks!.add(workflow, webhookData, mode, activation);
 			} catch (error) {
 				activatedKey.forEach(deleteKey => delete this.testWebhookData[deleteKey] );
 				await this.activeWebhooks!.removeWorkflow(workflow);

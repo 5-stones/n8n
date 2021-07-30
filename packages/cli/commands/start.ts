@@ -17,17 +17,24 @@ import {
 	Db,
 	ExternalHooks,
 	GenericHelpers,
+	IExecutionsCurrentSummary,
 	LoadNodesAndCredentials,
 	NodeTypes,
 	Server,
 	TestWebhooks,
-} from "../src";
+} from '../src';
 import { IDataObject } from 'n8n-workflow';
 
+import { 
+	getLogger,
+} from '../src/Logger';
+
+import {
+	LoggerProxy,
+} from 'n8n-workflow';
 
 let activeWorkflowRunner: ActiveWorkflowRunner.ActiveWorkflowRunner | undefined;
 let processExistCode = 0;
-
 
 export class Start extends Command {
 	static description = 'Starts n8n. Makes Web-UI available and starts active workflows';
@@ -70,7 +77,7 @@ export class Start extends Command {
 	 * get removed.
 	 */
 	static async stopProcess() {
-		console.log(`\nStopping n8n...`);
+		getLogger().info('\nStopping n8n...');
 
 		try {
 			const externalHooks = ExternalHooks();
@@ -97,7 +104,7 @@ export class Start extends Command {
 
 			// Wait for active workflow executions to finish
 			const activeExecutionsInstance = ActiveExecutions.getInstance();
-			let executingWorkflows = activeExecutionsInstance.getActiveExecutions();
+			let executingWorkflows = activeExecutionsInstance.getActiveExecutions() as IExecutionsCurrentSummary[];
 
 			let count = 0;
 			while (executingWorkflows.length !== 0) {
@@ -131,13 +138,21 @@ export class Start extends Command {
 		// Wrap that the process does not close but we can still use async
 		await (async () => {
 			try {
+				const logger = getLogger();
+				LoggerProxy.init(logger);
+				logger.info('Initializing n8n process');
+
+				// todo remove a few versions after release
+				logger.info('\nn8n now checks for new versions and security updates. You can turn this off using the environment variable N8N_VERSION_NOTIFICATIONS_ENABLED to "false"\nFor more information, please refer to https://docs.n8n.io/getting-started/installation/advanced/configuration.html\n');
+
 				// Start directly with the init of the database to improve startup time
-				const startDbInitPromise = Db.init().catch(error => {
-					console.error(`There was an error initializing DB: ${error.message}`);
+				const startDbInitPromise = Db.init().catch((error: Error) => {
+					logger.error(`There was an error initializing DB: "${error.message}"`);
 
 					processExistCode = 1;
 					// @ts-ignore
 					process.emit('SIGINT');
+					process.exit(1);
 				});
 
 				// Make sure the settings exist
@@ -171,7 +186,7 @@ export class Start extends Command {
 					const redisDB = config.get('queue.bull.redis.db');
 					const redisConnectionTimeoutLimit = config.get('queue.bull.redis.timeoutThreshold');
 					let lastTimer = 0, cumulativeTimeout = 0;
-					
+
 					const settings = {
 						retryStrategy: (times: number): number | null => {
 							const now = Date.now();
@@ -183,7 +198,7 @@ export class Start extends Command {
 								cumulativeTimeout += now - lastTimer;
 								lastTimer = now;
 								if (cumulativeTimeout > redisConnectionTimeoutLimit) {
-									console.error('Unable to connect to Redis after ' + redisConnectionTimeoutLimit + ". Exiting process.");
+									logger.error('Unable to connect to Redis after ' + redisConnectionTimeoutLimit + ". Exiting process.");
 									process.exit(1);
 								}
 							}
@@ -203,7 +218,7 @@ export class Start extends Command {
 					if (redisDB) {
 						settings.db = redisDB;
 					}
-					
+
 					// This connection is going to be our heartbeat
 					// IORedis automatically pings redis and tries to reconnect
 					// We will be using the retryStrategy above
@@ -212,19 +227,19 @@ export class Start extends Command {
 
 					redis.on('error', (error) => {
 						if (error.toString().includes('ECONNREFUSED') === true) {
-							console.warn('Redis unavailable - trying to reconnect...');
+							logger.warn('Redis unavailable - trying to reconnect...');
 						} else {
-							console.warn('Error with Redis: ', error);
+							logger.warn('Error with Redis: ', error);
 						}
 					});
 				}
-				
+
 				const dbType = await GenericHelpers.getConfigValue('database.type') as DatabaseType;
 
 				if (dbType === 'sqlite') {
 					const shouldRunVacuum = config.get('database.sqlite.executeVacuumOnStartup') as number;
 					if (shouldRunVacuum) {
-						Db.collections.Execution!.query("VACUUM;");
+						Db.collections.Execution!.query('VACUUM;');
 					}
 				}
 
@@ -283,7 +298,7 @@ export class Start extends Command {
 						Start.openBrowser();
 					}
 					this.log(`\nPress "o" to open in Browser.`);
-					process.stdin.on("data", (key : string) => {
+					process.stdin.on('data', (key: string) => {
 						if (key === 'o') {
 							Start.openBrowser();
 							inputText = '';

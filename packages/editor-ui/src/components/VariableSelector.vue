@@ -12,13 +12,10 @@
 
 <script lang="ts">
 
-import Vue from 'vue';
-
 import {
 	GenericValue,
 	IContextObject,
 	IDataObject,
-	IRun,
 	IRunData,
 	IRunExecutionData,
 	Workflow,
@@ -113,6 +110,9 @@ export default mixins(
 					if (Array.isArray(newOptions) && newOptions.length) {
 						// Has still options left so return
 						inputData.options = this.sortOptions(newOptions);
+						return inputData;
+					} else if (Array.isArray(newOptions) && newOptions.length === 0) {
+						delete inputData.options;
 						return inputData;
 					}
 					// Has no options left so remove
@@ -376,7 +376,7 @@ export default mixins(
 					return returnData;
 				}
 
-				const dataProxy = new WorkflowDataProxy(workflow, runExecutionData, runIndex, itemIndex, nodeName, connectionInputData, 'manual');
+				const dataProxy = new WorkflowDataProxy(workflow, runExecutionData, runIndex, itemIndex, nodeName, connectionInputData, {}, 'manual');
 				const proxy = dataProxy.getDataProxy();
 
 				// @ts-ignore

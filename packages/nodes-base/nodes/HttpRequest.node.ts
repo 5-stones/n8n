@@ -8,6 +8,8 @@ import {
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	NodeApiError,
+	NodeOperationError,
 } from 'n8n-workflow';
 
 import { OptionsWithUri } from 'request';
@@ -30,7 +32,7 @@ export class HttpRequest implements INodeType {
 		group: ['input'],
 		version: 1,
 		subtitle: '={{$parameter["requestMethod"] + ": " + $parameter["url"]}}',
-		description: 'Makes a HTTP request and returns the received data',
+		description: 'Makes an HTTP request and returns the response data',
 		defaults: {
 			name: 'HTTP Request',
 			color: '#2200DD',
@@ -345,6 +347,20 @@ export class HttpRequest implements INodeType {
 						default: '',
 						placeholder: 'http://myproxy:3128',
 						description: 'HTTP proxy to use.',
+					},
+					{
+						displayName: 'Split Into Items',
+						name: 'splitIntoItems',
+						type: 'boolean',
+						default: false,
+						description: 'Outputs each element of an array as own item.',
+						displayOptions: {
+							show: {
+								'/responseFormat': [
+									'json',
+								],
+							},
+						},
 					},
 					{
 						displayName: 'Timeout',
@@ -691,6 +707,8 @@ export class HttpRequest implements INodeType {
 			}
 			if (options.timeout !== undefined) {
 				requestOptions.timeout = options.timeout as number;
+			} else {
+				requestOptions.timeout = 3600000; // 1 hour
 			}
 
 			if (options.useQueryString === true) {
@@ -716,19 +734,19 @@ export class HttpRequest implements INodeType {
 							if (!contentTypesAllowed.includes(options.bodyContentType as string)) {
 								// As n8n-workflow.NodeHelpers.getParamterResolveOrder can not be changed
 								// easily to handle parameters in dot.notation simply error for now.
-								throw new Error('Sending binary data is only supported when option "Body Content Type" is set to "RAW/CUSTOM" or "FORM-DATA/MULTIPART"!');
+								throw new NodeOperationError(this.getNode(), 'Sending binary data is only supported when option "Body Content Type" is set to "RAW/CUSTOM" or "FORM-DATA/MULTIPART"!');
 							}
 
 							const item = items[itemIndex];
 
 							if (item.binary === undefined) {
-								throw new Error('No binary data exists on item!');
+								throw new NodeOperationError(this.getNode(), 'No binary data exists on item!');
 							}
 
 							if (options.bodyContentType === 'raw') {
 								const binaryPropertyName = this.getNodeParameter('binaryPropertyName', itemIndex) as string;
 								if (item.binary[binaryPropertyName] === undefined) {
-									throw new Error(`No binary data property "${binaryPropertyName}" does not exists on item!`);
+									throw new NodeOperationError(this.getNode(), `No binary data property "${binaryPropertyName}" does not exists on item!`);
 								}
 								const binaryProperty = item.binary[binaryPropertyName] as IBinaryData;
 								requestOptions.body = Buffer.from(binaryProperty.data, BINARY_ENCODING);
@@ -745,11 +763,11 @@ export class HttpRequest implements INodeType {
 										propertyName = propertyDataParts[0];
 										binaryPropertyName = propertyDataParts[1];
 									} else if (binaryPropertyNames.length > 1) {
-										throw new Error('If more than one property should be send it is needed to define the in the format: "sendKey1:binaryProperty1,sendKey2:binaryProperty2"');
+										throw new NodeOperationError(this.getNode(), 'If more than one property should be send it is needed to define the in the format: "sendKey1:binaryProperty1,sendKey2:binaryProperty2"');
 									}
 
 									if (item.binary[binaryPropertyName] === undefined) {
-										throw new Error(`No binary data property "${binaryPropertyName}" does not exists on item!`);
+										throw new NodeOperationError(this.getNode(), `No binary data property "${binaryPropertyName}" does not exists on item!`);
 									}
 
 									const binaryProperty = item.binary[binaryPropertyName] as IBinaryData;
@@ -781,8 +799,8 @@ export class HttpRequest implements INodeType {
 						try {
 							// @ts-ignore
 							requestOptions[optionData.name] = JSON.parse(requestOptions[optionData.name]);
-						} catch (e) {
-							throw new Error(`The data in "${optionData.displayName}" is no valid JSON. Set Body Content Type to "RAW/Custom" for XML or other types of payloads`);
+						} catch (error) {
+							throw new NodeOperationError(this.getNode(), `The data in "${optionData.displayName}" is no valid JSON. Set Body Content Type to "RAW/Custom" for XML or other types of payloads`);
 						}
 					}
 				}
@@ -796,8 +814,23 @@ export class HttpRequest implements INodeType {
 						// @ts-ignore
 						requestOptions[optionName] = {};
 						for (const parameterData of setUiParameter!.parameter as IDataObject[]) {
-							// @ts-ignore
-							requestOptions[optionName][parameterData!.name as string] = parameterData!.value;
+							const parameterDataName = parameterData!.name as string;
+							const newValue = parameterData!.value;
+							if (optionName === 'qs') {
+								const computeNewValue = (oldValue: unknown) => {
+									if (typeof oldValue === 'string') {
+										return [oldValue, newValue];
+									} else if (Array.isArray(oldValue)) {
+										return [...oldValue, newValue];
+									} else {
+										return newValue;
+									}
+								};
+								requestOptions[optionName][parameterDataName] = computeNewValue(requestOptions[optionName][parameterDataName]);
+							} else {
+								// @ts-ignore
+								requestOptions[optionName][parameterDataName] = newValue;
+							}
 						}
 					}
 				}
@@ -832,7 +865,7 @@ export class HttpRequest implements INodeType {
 
 			// Add Content Type if any are set
 			if (options.bodyContentCustomMimeType) {
-				if(requestOptions.headers === undefined) {
+				if (requestOptions.headers === undefined) {
 					requestOptions.headers = {};
 				}
 				requestOptions.headers['Content-Type'] = options.bodyContentCustomMimeType;
@@ -866,6 +899,17 @@ export class HttpRequest implements INodeType {
 				}
 			}
 
+			try {
+				let sendRequest: any = requestOptions; // tslint:disable-line:no-any
+				// Protect browser from sending large binary data
+				if (Buffer.isBuffer(sendRequest.body) && sendRequest.body.length > 250000) {
+					sendRequest = {
+						...requestOptions,
+						body: `Binary data got replaced with this text. Original was a Buffer with a size of ${requestOptions.body.length} byte.`,
+					};
+				}
+				this.sendMessageToUI(sendRequest);
+			} catch (e) {}
 
 			// Now that the options are all set make the actual http request
 			if (oAuth1Api !== undefined) {
@@ -888,7 +932,7 @@ export class HttpRequest implements INodeType {
 			if (response!.status !== 'fulfilled') {
 				if (this.continueOnFail() !== true) {
 					// throw error;
-					throw new Error(response!.reason);
+					throw new NodeApiError(this.getNode(), response);
 				} else {
 					// Return the actual reason as error
 					returnItems.push(
@@ -934,7 +978,7 @@ export class HttpRequest implements INodeType {
 						if (property === 'body') {
 							continue;
 						}
- 						returnItem[property] = response![property];
+						returnItem[property] = response![property];
 					}
 
 					newItem.json = returnItem;
@@ -979,8 +1023,8 @@ export class HttpRequest implements INodeType {
 					if (responseFormat === 'json' && typeof returnItem.body === 'string') {
 						try {
 							returnItem.body = JSON.parse(returnItem.body.replace(/^\uFEFF/gm, ''));
-						} catch (e) {
-							throw new Error('Response body is not valid JSON. Change "Response Format" to "String"');
+						} catch (error) {
+							throw new NodeOperationError(this.getNode(), 'Response body is not valid JSON. Change "Response Format" to "String"');
 						}
 					}
 					returnItems.push({ json: returnItem });
@@ -988,11 +1032,16 @@ export class HttpRequest implements INodeType {
 					if (responseFormat === 'json' && typeof response === 'string') {
 						try {
 							response = JSON.parse(response.replace(/^\uFEFF/gm, ''));
-						} catch (e) {
-							throw new Error('Response body is not valid JSON. Change "Response Format" to "String"');
+						} catch (error) {
+							throw new NodeOperationError(this.getNode(), 'Response body is not valid JSON. Change "Response Format" to "String"');
 						}
 					}
-					returnItems.push({ json: response });
+
+					if (options.splitIntoItems === true && Array.isArray(response)) {
+						response.forEach(item => returnItems.push({ json: item }));
+					} else {
+						returnItems.push({ json: response });
+					}
 				}
 			}
 		}

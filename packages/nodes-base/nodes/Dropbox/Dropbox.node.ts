@@ -361,7 +361,7 @@ export class Dropbox implements INodeType {
 						],
 					},
 				},
-				description: 'Name of the binary property to which to<br />write the data of the read file.',
+				description: 'Name of the binary property to which to write the data of the read file.',
 			},
 
 			// ----------------------------------
@@ -446,7 +446,7 @@ export class Dropbox implements INodeType {
 
 				},
 				placeholder: '',
-				description: 'Name of the binary property which contains<br />the data for the file to be uploaded.',
+				description: 'Name of the binary property which contains the data for the file to be uploaded.',
 			},
 
 			// ----------------------------------
@@ -796,7 +796,7 @@ export class Dropbox implements INodeType {
 		let simple = false;
 
 
-		const { accessType } = getCredentials.call(this);
+		const { accessType } = await getCredentials.call(this);
 
 		if (accessType === 'full') {
 			// get the root directory to set it as the default for all operations

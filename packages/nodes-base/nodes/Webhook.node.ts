@@ -9,7 +9,6 @@ import {
 	INodeType,
 	INodeTypeDescription,
 	IWebhookResponseData,
-	NodeApiError,
 	NodeOperationError,
 } from 'n8n-workflow';
 
@@ -132,7 +131,7 @@ export class Webhook implements INodeType {
 					},
 				],
 				default: 'GET',
-				description: 'The HTTP method to liste to.',
+				description: 'The HTTP method to listen to.',
 			},
 			{
 				displayName: 'Path',
@@ -144,30 +143,24 @@ export class Webhook implements INodeType {
 				description: 'The path to listen to.',
 			},
 			{
-				displayName: 'Response Code',
-				name: 'responseCode',
-				type: 'number',
-				typeOptions: {
-					minValue: 100,
-					maxValue: 599,
-				},
-				default: 200,
-				description: 'The HTTP Response code to return',
-			},
-			{
-				displayName: 'Response Mode',
+				displayName: 'Respond',
 				name: 'responseMode',
 				type: 'options',
 				options: [
 					{
-						name: 'On Received',
+						name: 'Immediately',
 						value: 'onReceived',
-						description: 'Returns directly with defined Response Code',
+						description: 'As soon as this node executes',
 					},
 					{
-						name: 'Last Node',
+						name: 'When last node finishes',
 						value: 'lastNode',
-						description: 'Returns data of the last executed node',
+						description: 'Returns data of the last-executed node',
+					},
+					{
+						name: 'Using \'Respond to Webhook\' node',
+						value: 'responseNode',
+						description: 'Response defined in that node',
 					},
 					{
 						name: 'No Body Response',
@@ -177,6 +170,37 @@ export class Webhook implements INodeType {
 				],
 				default: 'onReceived',
 				description: 'When and how to respond to the webhook.',
+			},
+			{
+				displayName: 'Insert a \'Respond to Webhook\' node to control when and how you respond. <a href="https://docs.n8n.io/nodes/n8n-nodes-base.respondToWebhook" target="_blank">More details</a>',
+				name: 'webhookNotice',
+				type: 'notice',
+				displayOptions: {
+					show: {
+						responseMode: [
+							'responseNode',
+						],
+					},
+				},
+				default: '',
+			},
+			{
+				displayName: 'Response Code',
+				name: 'responseCode',
+				type: 'number',
+				displayOptions: {
+					hide: {
+						responseMode: [
+							'responseNode',
+						],
+					},
+				},
+				typeOptions: {
+					minValue: 100,
+					maxValue: 599,
+				},
+				default: 200,
+				description: 'The HTTP Response code to return',
 			},
 			{
 				displayName: 'Response Data',
@@ -207,7 +231,7 @@ export class Webhook implements INodeType {
 					},
 				],
 				default: 'firstEntryJson',
-				description: 'What data should be returned. If it should return<br />all the itemsas array or only the first item as object.',
+				description: 'What data should be returned. If it should return all items as an array or only the first item as object.',
 			},
 			{
 				displayName: 'Property Name',
@@ -258,8 +282,8 @@ export class Webhook implements INodeType {
 								],
 							},
 						},
-						description: `Name of the binary property to which to write the data of<br />
-									the received file. If the data gets received via "Form-Data Multipart"<br />
+						description: `Name of the binary property to write the data of
+									the received file to. If the data gets received via "Form-Data Multipart"
 									it will be the prefix and a number starting with 0 will be attached to it.`,
 					},
 					{
@@ -374,7 +398,7 @@ export class Webhook implements INodeType {
 
 		if (authentication === 'basicAuth') {
 			// Basic authorization is needed to call webhook
-			const httpBasicAuth = this.getCredentials('httpBasicAuth');
+			const httpBasicAuth = await this.getCredentials('httpBasicAuth');
 
 			if (httpBasicAuth === undefined || !httpBasicAuth.user || !httpBasicAuth.password) {
 				// Data is not defined on node so can not authenticate
@@ -394,7 +418,7 @@ export class Webhook implements INodeType {
 			}
 		} else if (authentication === 'headerAuth') {
 			// Special header with value is needed to call webhook
-			const httpHeaderAuth = this.getCredentials('httpHeaderAuth');
+			const httpHeaderAuth = await this.getCredentials('httpHeaderAuth');
 
 			if (httpHeaderAuth === undefined || !httpHeaderAuth.name || !httpHeaderAuth.value) {
 				// Data is not defined on node so can not authenticate
@@ -412,7 +436,8 @@ export class Webhook implements INodeType {
 		// @ts-ignore
 		const mimeType = headers['content-type'] || 'application/json';
 		if (mimeType.includes('multipart/form-data')) {
-			const form = new formidable.IncomingForm({});
+			// @ts-ignore
+			const form = new formidable.IncomingForm({ multiples: true });
 
 			return new Promise((resolve, reject) => {
 
@@ -428,19 +453,37 @@ export class Webhook implements INodeType {
 					};
 
 					let count = 0;
-					for (const file of Object.keys(files)) {
-
-						let binaryPropertyName = file;
-						if (options.binaryPropertyName) {
-							binaryPropertyName = `${options.binaryPropertyName}${count}`;
+					for (const xfile of Object.keys(files)) {
+						const processFiles: formidable.File[] = [];
+						let multiFile = false;
+						if (Array.isArray(files[xfile])) {
+							//@ts-ignore
+							processFiles.push(...files[xfile] as formidable.File[]);
+							multiFile = true;
+						} else {
+							processFiles.push(files[xfile] as formidable.File);
 						}
 
-						const fileJson = ((files[file] as formidable.File).toJSON() as unknown) as IDataObject;
-						const fileContent = await fs.promises.readFile((files[file] as formidable.File).path);
+						let fileCount = 0;
+						for (const file of processFiles) {
+							let binaryPropertyName = xfile;
+							if (binaryPropertyName.endsWith('[]')) {
+								binaryPropertyName = binaryPropertyName.slice(0, -2);
+							}
+							if (multiFile === true) {
+								binaryPropertyName += fileCount++;
+							}
+							if (options.binaryPropertyName) {
+								binaryPropertyName = `${options.binaryPropertyName}${count}`;
+							}
 
-						returnItem.binary![binaryPropertyName] = await this.helpers.prepareBinaryData(Buffer.from(fileContent), fileJson.name as string, fileJson.type as string);
+							const fileJson = file.toJSON() as unknown as IDataObject;
+							const fileContent = await fs.promises.readFile(file.path);
 
-						count += 1;
+							returnItem.binary![binaryPropertyName] = await this.helpers.prepareBinaryData(Buffer.from(fileContent), fileJson.name as string, fileJson.type as string);
+
+							count += 1;
+						}
 					}
 					resolve({
 						workflowData: [

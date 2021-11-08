@@ -325,7 +325,7 @@ export class SurveyMonkeyTrigger implements INodeType {
 					},
 				},
 				default: true,
-				description: 'By default the webhook-data only contain the IDs. If this option gets activated it<br />will resolve the data automatically.',
+				description: 'By default the webhook-data only contain the IDs. If this option gets activated, it will resolve the data automatically.',
 			},
 			{
 				displayName: 'Only Answers',
@@ -497,9 +497,9 @@ export class SurveyMonkeyTrigger implements INodeType {
 		const webhookName = this.getWebhookName();
 
 		if (authenticationMethod === 'accessToken') {
-			credentials = this.getCredentials('surveyMonkeyApi') as IDataObject;
+			credentials = await this.getCredentials('surveyMonkeyApi') as IDataObject;
 		} else {
-			credentials = this.getCredentials('surveyMonkeyOAuth2Api') as IDataObject;
+			credentials = await this.getCredentials('surveyMonkeyOAuth2Api') as IDataObject;
 		}
 
 		if (webhookName === 'setup') {

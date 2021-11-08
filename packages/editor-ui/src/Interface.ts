@@ -13,10 +13,12 @@ import {
 	INodeParameters,
 	INodePropertyOptions,
 	INodeTypeDescription,
+	INodeTypeNameVersion,
 	IRunExecutionData,
 	IRun,
 	IRunData,
 	ITaskData,
+	ITelemetrySettings,
 	WorkflowExecuteMode,
 } from 'n8n-workflow';
 
@@ -128,10 +130,9 @@ export interface IRestApi {
 	getPastExecutions(filter: object, limit: number, lastId?: string | number, firstId?: string | number): Promise<IExecutionsListResponse>;
 	stopCurrentExecution(executionId: string): Promise<IExecutionsStopData>;
 	makeRestApiRequest(method: string, endpoint: string, data?: any): Promise<any>; // tslint:disable-line:no-any
-	getSettings(): Promise<IN8nUISettings>;
-	getNodeTypes(): Promise<INodeTypeDescription[]>;
-	getNodesInformation(nodeList: string[]): Promise<INodeTypeDescription[]>;
-	getNodeParameterOptions(nodeType: string, path: string, methodName: string, currentNodeParameters: INodeParameters, credentials?: INodeCredentials): Promise<INodePropertyOptions[]>;
+	getNodeTypes(onlyLatest?: boolean): Promise<INodeTypeDescription[]>;
+	getNodesInformation(nodeInfos: INodeTypeNameVersion[]): Promise<INodeTypeDescription[]>;
+	getNodeParameterOptions(nodeTypeAndVersion: INodeTypeNameVersion, path: string, methodName: string, currentNodeParameters: INodeParameters, credentials?: INodeCredentials): Promise<INodePropertyOptions[]>;
 	removeTestWebhook(workflowId: string): Promise<boolean>;
 	runWorkflow(runData: IStartRunData): Promise<IExecutionPushResponse>;
 	createNewWorkflow(sendData: IWorkflowDataUpdate): Promise<IWorkflowDb>;
@@ -140,19 +141,10 @@ export interface IRestApi {
 	getWorkflow(id: string): Promise<IWorkflowDb>;
 	getWorkflows(filter?: object): Promise<IWorkflowShortResponse[]>;
 	getWorkflowFromUrl(url: string): Promise<IWorkflowDb>;
-	createNewCredentials(sendData: ICredentialsDecrypted): Promise<ICredentialsResponse>;
-	deleteCredentials(id: string): Promise<void>;
-	updateCredentials(id: string, data: ICredentialsDecrypted): Promise<ICredentialsResponse>;
-	getAllCredentials(filter?: object): Promise<ICredentialsResponse[]>;
-	getCredentials(id: string, includeData?: boolean): Promise<ICredentialsDecryptedResponse | ICredentialsResponse | undefined>;
-	getCredentialTypes(): Promise<ICredentialType[]>;
 	getExecution(id: string): Promise<IExecutionResponse>;
 	deleteExecutions(sendData: IExecutionDeleteFilter): Promise<void>;
 	retryExecution(id: string, loadWorkflow?: boolean): Promise<boolean>;
 	getTimezones(): Promise<IDataObject>;
-	oAuth1CredentialAuthorize(sendData: ICredentialsResponse): Promise<string>;
-	oAuth2CredentialAuthorize(sendData: ICredentialsResponse): Promise<string>;
-	oAuth2Callback(code: string, state: string): Promise<string>;
 }
 
 export interface IBinaryDisplayData {
@@ -161,13 +153,6 @@ export interface IBinaryDisplayData {
 	node: string;
 	outputIndex: number;
 	runIndex: number;
-}
-
-export interface ICredentialsCreatedEvent {
-	data: ICredentialsDecryptedResponse;
-	options: {
-		closeDialog: boolean,
-	};
 }
 
 export interface IStartRunData {
@@ -264,7 +249,7 @@ export interface IActivationError {
 }
 
 export interface ICredentialsResponse extends ICredentialsEncrypted {
-	id?: string;
+	id: string;
 	createdAt: number | string;
 	updatedAt: number | string;
 }
@@ -353,6 +338,7 @@ export interface IExecutionsSummary {
 	finished?: boolean;
 	retryOf?: string;
 	retrySuccessId?: string;
+	waitTill?: Date;
 	startedAt: Date;
 	stoppedAt?: Date;
 	workflowId: string;
@@ -451,6 +437,17 @@ export interface IVersionNotificationSettings {
 	infoUrl: string;
 }
 
+export type IPersonalizationSurveyKeys = 'companySize' | 'codingSkill' | 'workArea' | 'otherWorkArea';
+
+export type IPersonalizationSurveyAnswers = {
+	[key in IPersonalizationSurveyKeys]: string | null
+};
+
+export interface IPersonalizationSurvey {
+	answers?: IPersonalizationSurveyAnswers;
+	shouldShow: boolean;
+}
+
 export interface IN8nUISettings {
 	endpointWebhook: string;
 	endpointWebhookTest: string;
@@ -471,6 +468,8 @@ export interface IN8nUISettings {
 	};
 	versionNotifications: IVersionNotificationSettings;
 	instanceId: string;
+	personalizationSurvey?: IPersonalizationSurvey;
+	telemetry: ITelemetrySettings;
 }
 
 export interface IWorkflowSettings extends IWorkflowSettingsWorkflow {
@@ -584,8 +583,6 @@ export interface IRootState {
 	activeActions: string[];
 	activeNode: string | null;
 	baseUrl: string;
-	credentials: ICredentialsResponse[] | null;
-	credentialTypes: ICredentialType[] | null;
 	endpointWebhook: string;
 	endpointWebhookTest: string;
 	executionId: string | null;
@@ -615,6 +612,20 @@ export interface IRootState {
 	workflow: IWorkflowDb;
 	sidebarMenuItems: IMenuItem[];
 	instanceId: string;
+	telemetry: ITelemetrySettings | null;
+}
+
+export interface ICredentialTypeMap {
+	[name: string]: ICredentialType;
+}
+
+export interface ICredentialMap {
+	[name: string]: ICredentialsResponse;
+}
+
+export interface ICredentialsState {
+	credentialTypes: ICredentialTypeMap;
+	credentials: ICredentialMap;
 }
 
 export interface ITagsState {
@@ -626,6 +637,8 @@ export interface ITagsState {
 
 export interface IModalState {
 	open: boolean;
+	mode?: string | null;
+	activeId?: string | null;
 }
 
 export interface IUiState {
@@ -635,6 +648,10 @@ export interface IUiState {
 		[key: string]: IModalState;
 	};
 	isPageLoading: boolean;
+}
+
+export interface ISettingsState {
+	settings: IN8nUISettings;
 }
 
 export interface IVersionsState {

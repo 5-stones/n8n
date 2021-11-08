@@ -718,6 +718,7 @@ export class Wait implements INodeType {
 						const processFiles: formidable.File[] = [];
 						let multiFile = false;
 						if (Array.isArray(files[xfile])) {
+							//@ts-ignore
 							processFiles.push(...files[xfile] as formidable.File[]);
 							multiFile = true;
 						} else {

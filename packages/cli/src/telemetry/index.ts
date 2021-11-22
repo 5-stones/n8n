@@ -113,7 +113,7 @@ export class Telemetry {
 		});
 	}
 
-	async identify(traits?: IDataObject): Promise<void> {
+	async identify(traits?: any): Promise<void> {
 		return new Promise<void>((resolve) => {
 			if (this.client) {
 				this.client.identify(
@@ -133,7 +133,7 @@ export class Telemetry {
 		});
 	}
 
-	async track(eventName: string, properties?: IDataObject): Promise<void> {
+	async track(eventName: string, properties?: any): Promise<void> {
 		return new Promise<void>((resolve) => {
 			if (this.client) {
 				this.client.track(

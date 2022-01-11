@@ -36,6 +36,15 @@
 			</span>
 			workflow
 		</span>
+		<span
+			class="retry-exec-button"
+			v-if="!executionFinished && !executionWating && !successfulRetry">
+			<n8n-button
+				:label="isRetrying ? 'Retrying' : 'Retry'"
+				:loading="isRetrying"
+				@click="retryExecution(executionId)"
+			/>
+		</span>
 		<ReadOnly class="read-only" />
 	</div>
 </template>
@@ -45,16 +54,28 @@ import mixins from "vue-typed-mixins";
 
 import { IExecutionResponse } from "../../../Interface";
 
+import { restApi } from '@/components/mixins/restApi';
+import { showMessage } from '@/components/mixins/showMessage';
+
 import { titleChange } from "@/components/mixins/titleChange";
 
 import WorkflowNameShort from "@/components/WorkflowNameShort.vue";
 import ReadOnly from "@/components/MainHeader/ExecutionDetails/ReadOnly.vue";
 
-export default mixins(titleChange).extend({
+export default mixins(
+	titleChange,
+	restApi,
+	showMessage,
+).extend({
 	name: "ExecutionDetails",
 	components: {
 		WorkflowNameShort,
 		ReadOnly,
+	},
+	data () {
+		return {
+			isRetrying: false,
+		};
 	},
 	computed: {
 		executionId(): string | undefined {
@@ -69,6 +90,11 @@ export default mixins(titleChange).extend({
 			const fullExecution = this.$store.getters.getWorkflowExecution;
 
 			return !!fullExecution && !!fullExecution.waitTill;
+		},
+		successfulRetry(): boolean {
+			const fullExecution = this.$store.getters.getWorkflowExecution;
+
+			return !!fullExecution && !!fullExecution.retrySuccessId;
 		},
 		workflowExecution(): IExecutionResponse | null {
 			return this.$store.getters.getWorkflowExecution;
@@ -85,6 +111,33 @@ export default mixins(titleChange).extend({
 				name: "NodeViewExisting",
 				params: { name: workflowId },
 			});
+		},
+		async retryExecution (executionId: string) {
+			this.isRetrying = true;
+
+			try {
+				const retrySuccessful = await this.restApi().retryExecution(executionId, true);
+
+				if (retrySuccessful === true) {
+					this.$showMessage({
+						title: 'Retry successful',
+						message: 'The retry was successful!',
+						type: 'success',
+					});
+				} else {
+					this.$showMessage({
+						title: 'Retry unsuccessful',
+						message: 'The retry was not successful!',
+						type: 'error',
+					});
+				}
+
+				this.isRetrying = false;
+			} catch (error) {
+				this.$showError(error, 'Problem with retry', 'There was a problem with the retry:');
+
+				this.isRetrying = false;
+			}
 		},
 	},
 });
@@ -107,6 +160,10 @@ export default mixins(titleChange).extend({
 .container {
 	width: 100%;
 	display: flex;
+}
+
+.retry-exec-button {
+	margin-right: 30px;
 }
 
 .title {

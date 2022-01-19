@@ -29,8 +29,8 @@ export async function xeroApiRequest(this: IExecuteFunctions | IExecuteSingleFun
 		json: true,
 	};
 	try {
-		if (organizationId) {
-			options.headers = { ...options.headers, 'Xero-tenant-id': organizationId };
+		if (body.organizationId) {
+			options.headers = { ...options.headers, 'Xero-tenant-id': body.organizationId };
 		}
 		if (Object.keys(headers).length !== 0) {
 			options.headers = Object.assign({}, options.headers, headers);

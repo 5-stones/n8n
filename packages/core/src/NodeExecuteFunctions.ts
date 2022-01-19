@@ -59,6 +59,8 @@ import { stringify } from 'qs';
 import * as clientOAuth1 from 'oauth-1.0a';
 import { Token } from 'oauth-1.0a';
 import * as clientOAuth2 from 'client-oauth2';
+import * as crypto from 'crypto';
+import * as url from 'url';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { get } from 'lodash';
 // eslint-disable-next-line import/no-extraneous-dependencies
@@ -71,11 +73,17 @@ import { createHmac } from 'crypto';
 import { fromBuffer } from 'file-type';
 import { lookup } from 'mime-types';
 
-import axios, { AxiosProxyConfig, AxiosRequestConfig, Method } from 'axios';
+import axios, {
+	AxiosPromise,
+	AxiosProxyConfig,
+	AxiosRequestConfig,
+	AxiosResponse,
+	Method,
+} from 'axios';
 import { URL, URLSearchParams } from 'url';
+import { BinaryDataManager } from './BinaryDataManager';
 // eslint-disable-next-line import/no-cycle
 import {
-	BINARY_ENCODING,
 	ICredentialTestFunctions,
 	IHookFunctions,
 	ILoadOptionsFunctions,
@@ -87,6 +95,8 @@ import {
 axios.defaults.timeout = 300000;
 // Prevent axios from adding x-form-www-urlencoded headers by default
 axios.defaults.headers.post = {};
+axios.defaults.headers.put = {};
+axios.defaults.headers.patch = {};
 axios.defaults.paramsSerializer = (params) => {
 	if (params instanceof URLSearchParams) {
 		return params.toString();
@@ -133,6 +143,28 @@ function searchForHeader(headers: IDataObject, headerName: string) {
 	const headerNames = Object.keys(headers);
 	headerName = headerName.toLowerCase();
 	return headerNames.find((thisHeader) => thisHeader.toLowerCase() === headerName);
+}
+
+async function generateContentLengthHeader(formData: FormData, headers: IDataObject) {
+	if (!formData || !formData.getLength) {
+		return;
+	}
+	try {
+		const length = await new Promise((res, rej) => {
+			formData.getLength((error: Error | null, length: number) => {
+				if (error) {
+					rej(error);
+					return;
+				}
+				res(length);
+			});
+		});
+		headers = Object.assign(headers, {
+			'content-length': length,
+		});
+	} catch (error) {
+		Logger.error('Unable to calculate form data length', { error });
+	}
 }
 
 async function parseRequestObject(requestObject: IDataObject) {
@@ -199,6 +231,7 @@ async function parseRequestObject(requestObject: IDataObject) {
 		delete axiosConfig.headers[contentTypeHeaderKeyName];
 		const headers = axiosConfig.data.getHeaders();
 		axiosConfig.headers = Object.assign(axiosConfig.headers || {}, headers);
+		await generateContentLengthHeader(axiosConfig.data, axiosConfig.headers);
 	} else {
 		// When using the `form` property it means the content should be x-www-form-urlencoded.
 		if (requestObject.form !== undefined && requestObject.body === undefined) {
@@ -235,6 +268,7 @@ async function parseRequestObject(requestObject: IDataObject) {
 			// Mix in headers as FormData creates the boundary.
 			const headers = axiosConfig.data.getHeaders();
 			axiosConfig.headers = Object.assign(axiosConfig.headers || {}, headers);
+			await generateContentLengthHeader(axiosConfig.data, axiosConfig.headers);
 		} else if (requestObject.body !== undefined) {
 			// If we have body and possibly form
 			if (requestObject.form !== undefined) {
@@ -444,6 +478,49 @@ async function parseRequestObject(requestObject: IDataObject) {
 	return axiosConfig;
 }
 
+function digestAuthAxiosConfig(
+	axiosConfig: AxiosRequestConfig,
+	response: AxiosResponse,
+	auth: AxiosRequestConfig['auth'],
+): AxiosRequestConfig {
+	const authDetails = response.headers['www-authenticate']
+		.split(',')
+		.map((v: string) => v.split('='));
+	if (authDetails) {
+		const nonceCount = `000000001`;
+		const cnonce = crypto.randomBytes(24).toString('hex');
+		const realm: string = authDetails
+			.find((el: any) => el[0].toLowerCase().indexOf('realm') > -1)[1]
+			.replace(/"/g, '');
+		const nonce: string = authDetails
+			.find((el: any) => el[0].toLowerCase().indexOf('nonce') > -1)[1]
+			.replace(/"/g, '');
+		const ha1 = crypto
+			.createHash('md5')
+			.update(`${auth?.username as string}:${realm}:${auth?.password as string}`)
+			.digest('hex');
+		const path = new url.URL(axiosConfig.url!).pathname;
+		const ha2 = crypto
+			.createHash('md5')
+			.update(`${axiosConfig.method ?? 'GET'}:${path}`)
+			.digest('hex');
+		const response = crypto
+			.createHash('md5')
+			.update(`${ha1}:${nonce}:${nonceCount}:${cnonce}:auth:${ha2}`)
+			.digest('hex');
+		const authorization =
+			`Digest username="${auth?.username as string}",realm="${realm}",` +
+			`nonce="${nonce}",uri="${path}",qop="auth",algorithm="MD5",` +
+			`response="${response}",nc="${nonceCount}",cnonce="${cnonce}"`;
+		if (axiosConfig.headers) {
+			axiosConfig.headers.authorization = authorization;
+		} else {
+			axiosConfig.headers = { authorization };
+		}
+	}
+	return axiosConfig;
+}
+
 async function proxyRequestToAxios(
 	uriOrObject: string | IDataObject,
 	options?: IDataObject,
@@ -457,8 +534,13 @@ async function proxyRequestToAxios(
 	}
 
 	let axiosConfig: AxiosRequestConfig = {};
-
-	let configObject: IDataObject;
+	let axiosPromise: AxiosPromise;
+	type ConfigObject = {
+		auth?: { sendImmediately: boolean };
+		resolveWithFullResponse?: boolean;
+		simple?: boolean;
+	};
+	let configObject: ConfigObject;
 	if (uriOrObject !== undefined && typeof uriOrObject === 'string') {
 		axiosConfig.url = uriOrObject;
 	}
@@ -470,13 +552,41 @@ async function proxyRequestToAxios(
 
 	axiosConfig = Object.assign(axiosConfig, await parseRequestObject(configObject));
 
-	Logger.debug('Proxying request to axios', {
-		originalConfig: configObject,
-		parsedConfig: axiosConfig,
-	});
+	Logger.debug(
+		'Proxying request to axios',
+		// {
+		// 	originalConfig: configObject,
+		// 	parsedConfig: axiosConfig,
+		// }
+	);
+
+	if (configObject.auth?.sendImmediately === false) {
+		// for digest-auth
+		const { auth } = axiosConfig;
+		delete axiosConfig.auth;
+		// eslint-disable-next-line no-async-promise-executor
+		axiosPromise = new Promise(async (resolve, reject) => {
+			try {
+				const result = await axios(axiosConfig);
+				resolve(result);
+			} catch (resp: any) {
+				if (
+					resp.response === undefined ||
+					resp.response.status !== 401 ||
+					!resp.response.headers['www-authenticate']?.includes('nonce')
+				) {
+					reject(resp);
+				}
+				axiosConfig = digestAuthAxiosConfig(axiosConfig, resp.response, auth);
+				resolve(axios(axiosConfig));
+			}
+		});
+	} else {
+		axiosPromise = axios(axiosConfig);
+	}
 
 	return new Promise((resolve, reject) => {
-		axios(axiosConfig)
+		axiosPromise
 			.then((response) => {
 				if (configObject.resolveWithFullResponse === true) {
 					let body = response.data;
@@ -522,10 +632,15 @@ async function proxyRequestToAxios(
 				}
 
 				Logger.debug('Request proxied to Axios failed', { error });
+
 				// Axios hydrates the original error with more data. We extract them.
 				// https://github.com/axios/axios/blob/master/lib/core/enhanceError.js
 				// Note: `code` is ignored as it's an expected part of the errorData.
 				const { request, response, isAxiosError, toJSON, config, ...errorData } = error;
+				if (response) {
+					error.message = `${response.status as number} - ${JSON.stringify(response.data)}`;
+				}
+
 				error.cause = errorData;
 				error.error = error.response?.data || errorData;
 				error.statusCode = error.response?.status;
@@ -651,7 +766,7 @@ export async function getBinaryDataBuffer(
 	inputIndex: number,
 ): Promise<Buffer> {
 	const binaryData = inputData.main![inputIndex]![itemIndex]!.binary![propertyName]!;
-	return Buffer.from(binaryData.data, BINARY_ENCODING);
+	return BinaryDataManager.getInstance().retrieveBinaryData(binaryData);
 }
 
 /**
@@ -666,6 +781,7 @@ export async function getBinaryDataBuffer(
  */
 export async function prepareBinaryData(
 	binaryData: Buffer,
+	executionId: string,
 	filePath?: string,
 	mimeType?: string,
 ): Promise<IBinaryData> {
@@ -696,10 +812,7 @@ export async function prepareBinaryData(
 
 	const returnData: IBinaryData = {
 		mimeType,
-		// TODO: Should program it in a way that it does not have to converted to base64
-		//       It should only convert to and from base64 when saved in database because
-		//       of for example an error or when there is a wait node.
-		data: binaryData.toString(BINARY_ENCODING),
+		data: '',
 	};
 
 	if (filePath) {
@@ -722,7 +835,7 @@ export async function prepareBinaryData(
 		}
 	}
 
-	return returnData;
+	return BinaryDataManager.getInstance().storeBinaryData(returnData, binaryData, executionId);
 }
 
 /**
@@ -1339,7 +1452,19 @@ export function getExecutePollFunctions(
 			},
 			helpers: {
 				httpRequest,
-				prepareBinaryData,
+				async prepareBinaryData(
+					binaryData: Buffer,
+					filePath?: string,
+					mimeType?: string,
+				): Promise<IBinaryData> {
+					return prepareBinaryData.call(
+						this,
+						binaryData,
+						additionalData.executionId!,
+						filePath,
+						mimeType,
+					);
+				},
 				request: proxyRequestToAxios,
 				async requestOAuth2(
 					this: IAllExecuteFunctions,
@@ -1445,8 +1570,19 @@ export function getExecuteTriggerFunctions(
 			},
 			helpers: {
 				httpRequest,
-				prepareBinaryData,
-
+				async prepareBinaryData(
+					binaryData: Buffer,
+					filePath?: string,
+					mimeType?: string,
+				): Promise<IBinaryData> {
+					return prepareBinaryData.call(
+						this,
+						binaryData,
+						additionalData.executionId!,
+						filePath,
+						mimeType,
+					);
+				},
 				request: proxyRequestToAxios,
 				async requestOAuth2(
 					this: IAllExecuteFunctions,
@@ -1522,7 +1658,14 @@ export function getExecuteFunctions(
 				workflowInfo: IExecuteWorkflowInfo,
 				inputData?: INodeExecutionData[],
 			): Promise<any> {
-				return additionalData.executeWorkflow(workflowInfo, additionalData, inputData);
+				return additionalData
+					.executeWorkflow(workflowInfo, additionalData, inputData)
+					.then(async (result) =>
+						BinaryDataManager.getInstance().duplicateBinaryData(
+							result,
+							additionalData.executionId!,
+						),
+					);
 			},
 			getContext(type: string): IContextObject {
 				return NodeHelpers.getContext(runExecutionData, type, node);
@@ -1623,13 +1766,13 @@ export function getExecuteFunctions(
 			async putExecutionToWait(waitTill: Date): Promise<void> {
 				runExecutionData.waitTill = waitTill;
 			},
-			sendMessageToUI(message: any): void {
+			sendMessageToUI(...args: any[]): void {
 				if (mode !== 'manual') {
 					return;
 				}
 				try {
 					if (additionalData.sendMessageToUI) {
-						additionalData.sendMessageToUI(node.name, message);
+						additionalData.sendMessageToUI(node.name, args);
 					}
 				} catch (error) {
 					// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -1641,7 +1784,19 @@ export function getExecuteFunctions(
 			},
 			helpers: {
 				httpRequest,
-				prepareBinaryData,
+				async prepareBinaryData(
+					binaryData: Buffer,
+					filePath?: string,
+					mimeType?: string,
+				): Promise<IBinaryData> {
+					return prepareBinaryData.call(
+						this,
+						binaryData,
+						additionalData.executionId!,
+						filePath,
+						mimeType,
+					);
+				},
 				async getBinaryDataBuffer(
 					itemIndex: number,
 					propertyName: string,
@@ -1822,7 +1977,19 @@ export function getExecuteSingleFunctions(
 			},
 			helpers: {
 				httpRequest,
-				prepareBinaryData,
+				async prepareBinaryData(
+					binaryData: Buffer,
+					filePath?: string,
+					mimeType?: string,
+				): Promise<IBinaryData> {
+					return prepareBinaryData.call(
+						this,
+						binaryData,
+						additionalData.executionId!,
+						filePath,
+						mimeType,
+					);
+				},
 				request: proxyRequestToAxios,
 				async requestOAuth2(
 					this: IAllExecuteFunctions,
@@ -2203,7 +2370,19 @@ export function getExecuteWebhookFunctions(
 			prepareOutputData: NodeHelpers.prepareOutputData,
 			helpers: {
 				httpRequest,
-				prepareBinaryData,
+				async prepareBinaryData(
+					binaryData: Buffer,
+					filePath?: string,
+					mimeType?: string,
+				): Promise<IBinaryData> {
+					return prepareBinaryData.call(
+						this,
+						binaryData,
+						additionalData.executionId!,
+						filePath,
+						mimeType,
+					);
+				},
 				request: proxyRequestToAxios,
 				async requestOAuth2(
 					this: IAllExecuteFunctions,

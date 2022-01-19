@@ -135,16 +135,16 @@ export class Wait implements INodeType {
 					{
 						name: 'At specified time',
 						value: 'specificTime',
-						description: 'Waits until the set date time to continue',
+						description: 'Waits until a specific date and time to continue',
 					},
 					{
 						name: 'On webhook call',
 						value: 'webhook',
-						description: 'Waits for a webhook call',
+						description: 'Waits for a webhook call before continuing',
 					},
 				],
 				default: 'timeInterval',
-				description: 'For what the node should wait for before to continue with the execution',
+				description: 'Determines the waiting mode to use before the workflow continues',
 			},
 
 			// ----------------------------------
@@ -169,7 +169,7 @@ export class Wait implements INodeType {
 			//         resume:timeInterval
 			// ----------------------------------
 			{
-				displayName: 'Amount',
+				displayName: 'Wait Amount',
 				name: 'amount',
 				type: 'number',
 				displayOptions: {
@@ -187,7 +187,7 @@ export class Wait implements INodeType {
 				description: 'The time to wait',
 			},
 			{
-				displayName: 'Unit',
+				displayName: 'Wait Unit',
 				name: 'unit',
 				type: 'options',
 				displayOptions: {
@@ -216,7 +216,7 @@ export class Wait implements INodeType {
 					},
 				],
 				default: 'hours',
-				description: 'Unit of the interval value',
+				description: 'The time unit of the Wait Amount value',
 			},
 
 
@@ -224,7 +224,7 @@ export class Wait implements INodeType {
 			//         resume:webhook
 			// ----------------------------------
 			{
-				displayName: 'The URL to call will be generated at run time, and can be referenced under <strong>$resumeWebhookUrl</strong>. Send it somewhere before getting to this node. <a href="https://docs.n8n.io/nodes/n8n-nodes-base.wait?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-base.wait" target="_blank">More info</a>',
+				displayName: 'The webhook URL will be generated at run time. It can be referenced with the <strong>$resumeWebhookUrl</strong> variable. Send it somewhere before getting to this node. <a href="https://docs.n8n.io/nodes/n8n-nodes-base.wait?utm_source=n8n_app&utm_medium=node_settings_modal-credential_link&utm_campaign=n8n-nodes-base.wait" target="_blank">More info</a>',
 				name: 'webhookNotice',
 				type: 'notice',
 				displayOptions: {
@@ -262,7 +262,7 @@ export class Wait implements INodeType {
 					},
 				],
 				default: 'GET',
-				description: 'The HTTP method to liste to',
+				description: 'The HTTP method of the Webhook call',
 			},
 			{
 				displayName: 'Response Code',
@@ -283,7 +283,7 @@ export class Wait implements INodeType {
 				description: 'The HTTP Response code to return',
 			},
 			{
-				displayName: 'Response Mode',
+				displayName: 'Respond',
 				name: 'responseMode',
 				type: 'options',
 				displayOptions: {
@@ -295,14 +295,19 @@ export class Wait implements INodeType {
 				},
 				options: [
 					{
-						name: 'On Received',
+						name: 'Immediately',
 						value: 'onReceived',
-						description: 'Returns directly with defined Response Code',
+						description: 'As soon as this node executes',
 					},
 					{
-						name: 'Last Node',
+						name: 'When last node finishes',
 						value: 'lastNode',
-						description: 'Returns data of the last executed node',
+						description: 'Returns data of the last-executed node',
+					},
+					{
+						name: 'Using \'Respond to Webhook\' node',
+						value: 'responseNode',
+						description: 'Response defined in that node',
 					},
 				],
 				default: 'onReceived',
@@ -340,7 +345,7 @@ export class Wait implements INodeType {
 					},
 				],
 				default: 'firstEntryJson',
-				description: 'What data should be returned. If it should return<br />all the itemsas array or only the first item as object',
+				description: 'What data should be returned. If it should return all the items as array or only the first item as object',
 			},
 			{
 				displayName: 'Property Name',
@@ -365,8 +370,8 @@ export class Wait implements INodeType {
 				name: 'limitWaitTime',
 				type: 'boolean',
 				default: false,
-				description: `If no webhook call is received, the workflow will automatically<br />
-							 resume execution after specified condition.`,
+				description: `If no webhook call is received, the workflow will automatically
+							 resume execution after the specified limit type`,
 				displayOptions: {
 					show: {
 						resume: [
@@ -395,10 +400,12 @@ export class Wait implements INodeType {
 				options: [
 					{
 						name: 'After time interval',
+						description: 'Waits for a certain amount of time',
 						value: 'afterTimeInterval',
 					},
 					{
 						name: 'At specified time',
+						description: 'Waits until the set date and time to continue',
 						value: 'atSpecifiedTime',
 					},
 				],
@@ -483,7 +490,7 @@ export class Wait implements INodeType {
 					},
 				},
 				default: '',
-				description: 'Continue execution on the informed date',
+				description: 'Continue execution after the specified date and time',
 			},
 			{
 				displayName: 'Options',
@@ -526,8 +533,8 @@ export class Wait implements INodeType {
 								],
 							},
 						},
-						description: `Name of the binary property to which to write the data of<br />
-									the received file. If the data gets received via "Form-Data Multipart"<br />
+						description: `Name of the binary property to which to write the data of
+									the received file. If the data gets received via "Form-Data Multipart"
 									it will be the prefix and a number starting with 0 will be attached to it.`,
 					},
 					{
@@ -619,7 +626,7 @@ export class Wait implements INodeType {
 						type: 'string',
 						default: '',
 						placeholder: 'webhook',
-						description: 'The webhook suffix path that will be appended to the restart URL. Important: Does currently not support expressions.',
+						description: 'This suffix path will be appended to the restart URL. Helpful when using multiple wait nodes. Note: Does not support expressions.',
 					},
 					// {
 					// 	displayName: 'Raw Body',
@@ -690,7 +697,8 @@ export class Wait implements INodeType {
 		// @ts-ignore
 		const mimeType = headers['content-type'] || 'application/json';
 		if (mimeType.includes('multipart/form-data')) {
-			const form = new formidable.IncomingForm({});
+			// @ts-ignore
+			const form = new formidable.IncomingForm({ multiples: true });
 
 			return new Promise((resolve, reject) => {
 
@@ -706,19 +714,37 @@ export class Wait implements INodeType {
 					};
 
 					let count = 0;
-					for (const file of Object.keys(files)) {
-
-						let binaryPropertyName = file;
-						if (options.binaryPropertyName) {
-							binaryPropertyName = `${options.binaryPropertyName}${count}`;
+					for (const xfile of Object.keys(files)) {
+						const processFiles: formidable.File[] = [];
+						let multiFile = false;
+						if (Array.isArray(files[xfile])) {
+							//@ts-ignore
+							processFiles.push(...files[xfile] as formidable.File[]);
+							multiFile = true;
+						} else {
+							processFiles.push(files[xfile] as formidable.File);
 						}
 
-						const fileJson = (files[file] as formidable.File).toJSON() as unknown as IDataObject;
-						const fileContent = await fs.promises.readFile((files[file] as formidable.File).path);
+						let fileCount = 0;
+						for (const file of processFiles) {
+							let binaryPropertyName = xfile;
+							if (binaryPropertyName.endsWith('[]')) {
+								binaryPropertyName = binaryPropertyName.slice(0, -2);
+							}
+							if (multiFile === true) {
+								binaryPropertyName += fileCount++;
+							}
+							if (options.binaryPropertyName) {
+								binaryPropertyName = `${options.binaryPropertyName}${count}`;
+							}
 
-						returnItem.binary![binaryPropertyName] = await this.helpers.prepareBinaryData(Buffer.from(fileContent), fileJson.name as string, fileJson.type as string);
+							const fileJson = file.toJSON() as unknown as IDataObject;
+							const fileContent = await fs.promises.readFile(file.path);
 
-						count += 1;
+							returnItem.binary![binaryPropertyName] = await this.helpers.prepareBinaryData(Buffer.from(fileContent), fileJson.name as string, fileJson.type as string);
+
+							count += 1;
+						}
 					}
 					resolve({
 						workflowData: [

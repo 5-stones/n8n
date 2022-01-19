@@ -4,12 +4,15 @@ import {
 } from 'n8n-core';
 
 import {
+	ICredentialsDecrypted,
+	ICredentialTestFunctions,
 	IDataObject,
 	ILoadOptionsFunctions,
 	INodeExecutionData,
 	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
+	NodeCredentialTestResult,
 	NodeOperationError,
 } from 'n8n-workflow';
 
@@ -23,6 +26,7 @@ import {
 } from './GoogleSheet';
 
 import {
+	getAccessToken,
 	googleApiRequest,
 	hexToRgb,
 } from './GenericFunctions';
@@ -53,6 +57,7 @@ export class GoogleSheets implements INodeType {
 						],
 					},
 				},
+				testedBy: 'googleApiCredentialTest',
 			},
 			{
 				name: 'googleSheetsOAuth2Api',
@@ -196,7 +201,7 @@ export class GoogleSheets implements INodeType {
 				},
 				default: 'A:F',
 				required: true,
-				description: 'The table range to read from or to append data to. See the Google <a href="https://developers.google.com/sheets/api/guides/values#writing">documentation</a> for the details.<br />If it contains multiple sheets it can also be<br />added like this: "MySheet!A:F"',
+				description: 'The table range to read from or to append data to. See the Google <a href="https://developers.google.com/sheets/api/guides/values#writing">documentation</a> for the details.<br />If it contains multiple sheets it can also be added like this: "MySheet!A:F"',
 			},
 
 			// ----------------------------------
@@ -415,7 +420,7 @@ export class GoogleSheets implements INodeType {
 						],
 					},
 				},
-				description: 'Index of the first row which contains<br />the actual data and not the keys. Starts with 0.',
+				description: 'Index of the first row which contains the actual data and not the keys. Starts with 0.',
 			},
 
 			// ----------------------------------
@@ -513,7 +518,7 @@ export class GoogleSheets implements INodeType {
 						],
 					},
 				},
-				description: 'The name of the key to identify which<br />data should be updated in the sheet.',
+				description: 'The name of the key to identify which data should be updated in the sheet.',
 			},
 
 			{
@@ -1004,6 +1009,30 @@ export class GoogleSheets implements INodeType {
 				}
 
 				return returnData;
+			},
+		},
+		credentialTest: {
+			async googleApiCredentialTest(this: ICredentialTestFunctions, credential: ICredentialsDecrypted): Promise<NodeCredentialTestResult> {
+				try {
+					const tokenRequest = await getAccessToken.call(this, credential.data!);
+					if (!tokenRequest.access_token) {
+						return {
+							status: 'Error',
+							message: 'Could not generate a token from your private key.',
+						};
+					}
+				} catch(err) {
+					return {
+						status: 'Error',
+						message: `Private key validation failed: ${err.message}`,
+					};
+				}
+
+				return {
+					status: 'OK',
+					message: 'Connection successful!',
+				};
+
 			},
 		},
 	};

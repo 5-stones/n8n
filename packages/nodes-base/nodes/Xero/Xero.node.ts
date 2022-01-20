@@ -85,7 +85,6 @@ export class Xero implements INodeType {
 		description: 'Consume Xero API',
 		defaults: {
 			name: 'Xero',
-			color: '#13b5ea',
 		},
 		inputs: ['main'],
 		outputs: ['main'],

@@ -32,7 +32,6 @@ export class Telegram implements INodeType {
 		description: 'Sends data to Telegram',
 		defaults: {
 			name: 'Telegram',
-			color: '#0088cc',
 		},
 		inputs: ['main'],
 		outputs: ['main'],
@@ -981,7 +980,7 @@ export class Telegram implements INodeType {
 					},
 				],
 				default: 'typing',
-				description: 'Type of action to broadcast. Choose one, depending on what the user is about to receive.<br />The status is set for 5 seconds or less (when a message arrives from your bot).',
+				description: 'Type of action to broadcast. Choose one, depending on what the user is about to receive. The status is set for 5 seconds or less (when a message arrives from your bot).',
 			},
 
 

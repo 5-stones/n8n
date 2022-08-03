@@ -8,10 +8,6 @@ const scopes = [
 	'accounting.transactions',
 	'accounting.settings',
 	'accounting.contacts',
-	'accounting.attachments',
-	'files',
-	'assets',
-	'projects',
 ];
 
 export class XeroOAuth2Api implements ICredentialType {

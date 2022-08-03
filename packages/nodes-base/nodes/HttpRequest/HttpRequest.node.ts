@@ -290,7 +290,6 @@ export class HttpRequest implements INodeType {
 									'PATCH',
 									'POST',
 									'PUT',
-									'DELETE',
 								],
 							},
 						},
@@ -471,7 +470,6 @@ export class HttpRequest implements INodeType {
 							'PATCH',
 							'POST',
 							'PUT',
-							'DELETE',
 						],
 					},
 				},
@@ -495,7 +493,6 @@ export class HttpRequest implements INodeType {
 							'PATCH',
 							'POST',
 							'PUT',
-							'DELETE',
 						],
 					},
 				},
@@ -854,6 +851,9 @@ export class HttpRequest implements INodeType {
 									}
 								};
 								requestOptions[optionName][parameterDataName] = computeNewValue(requestOptions[optionName][parameterDataName]);
+							} else if (optionName === 'headers') {
+								// @ts-ignore
+								requestOptions[optionName][parameterDataName.toString().toLowerCase()] = newValue;
 							} else {
 								// @ts-ignore
 								requestOptions[optionName][parameterDataName] = newValue;
@@ -981,7 +981,6 @@ export class HttpRequest implements INodeType {
 				}
 			}
 
-
 			response = response.value;
 
 			const options = this.getNodeParameter('options', itemIndex, {}) as IDataObject;
@@ -1033,7 +1032,7 @@ export class HttpRequest implements INodeType {
 					const returnItem: IDataObject = {};
 					for (const property of fullReponseProperties) {
 						if (property === 'body') {
-							returnItem[dataPropertyName] = response![property].replace(/^\uFEFF/gm, '');
+							returnItem[dataPropertyName] = response![property];
 							continue;
 						}
 
@@ -1043,7 +1042,7 @@ export class HttpRequest implements INodeType {
 				} else {
 					returnItems.push({
 						json: {
-							[dataPropertyName]: response.replace(/^\uFEFF/gm, ''),
+							[dataPropertyName]: response,
 						},
 					});
 				}
@@ -1057,16 +1056,17 @@ export class HttpRequest implements INodeType {
 
 					if (responseFormat === 'json' && typeof returnItem.body === 'string') {
 						try {
-							returnItem.body = JSON.parse(returnItem.body.replace(/^\uFEFF/gm, ''));
+							returnItem.body = JSON.parse(returnItem.body);
 						} catch (error) {
 							throw new NodeOperationError(this.getNode(), 'Response body is not valid JSON. Change "Response Format" to "String"');
 						}
 					}
+
 					returnItems.push({ json: returnItem });
 				} else {
 					if (responseFormat === 'json' && typeof response === 'string') {
 						try {
-							response = JSON.parse(response.replace(/^\uFEFF/gm, ''));
+							response = JSON.parse(response);
 						} catch (error) {
 							throw new NodeOperationError(this.getNode(), 'Response body is not valid JSON. Change "Response Format" to "String"');
 						}
@@ -1080,6 +1080,7 @@ export class HttpRequest implements INodeType {
 				}
 			}
 		}
+
 		return this.prepareOutputData(returnItems);
 	}
 }

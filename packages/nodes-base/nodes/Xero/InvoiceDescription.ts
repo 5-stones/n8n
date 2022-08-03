@@ -115,23 +115,6 @@ export const invoiceFields: INodeProperties[] = [
 		description: 'Contact ID',
 	},
 	{
-		displayName: 'Line Items Array (JSON)',
-		name: 'lineItemsUiArray',
-		type: 'json',
-		default: '',
-		description: 'array of line items(indetermined size)',
-		displayOptions: {
-			show: {
-				resource: [
-					'invoice',
-				],
-				operation: [
-					'create',
-				],
-			},
-		},
-	},
-	{
 		displayName: 'Line Items',
 		name: 'lineItemsUi',
 		placeholder: 'Add Line Item',
@@ -435,14 +418,6 @@ export const invoiceFields: INodeProperties[] = [
 					{
 						name: 'Authorised',
 						value: 'AUTHORISED',
-					},
-					{
-						name: 'Deleted',
-						value: 'DELETED',
-					},
-					{
-						name: 'Voided',
-						value: 'VOIDED',
 					},
 				],
 				default: 'DRAFT',
@@ -806,14 +781,6 @@ export const invoiceFields: INodeProperties[] = [
 						name: 'Authorised',
 						value: 'AUTHORISED',
 					},
-					{
-						name: 'Deleted',
-						value: 'DELETED',
-					},
-					{
-						name: 'Voided',
-						value: 'VOIDED',
-					},
 				],
 				default: 'DRAFT',
 			},
@@ -997,14 +964,6 @@ export const invoiceFields: INodeProperties[] = [
 						name: 'Authorised',
 						value: 'AUTHORISED',
 					},
-					{
-						name: 'Deleted',
-						value: 'DELETED',
-					},
-					{
-						name: 'Voided',
-						value: 'VOIDED',
-					},
 				],
 				default: [],
 			},
@@ -1018,17 +977,6 @@ export const invoiceFields: INodeProperties[] = [
 				placeholder: 'EmailAddress!=null&&EmailAddress.StartsWith("boom")',
 				default: '',
 				description: `The where parameter allows you to filter on endpoints and elements that don't have explicit parameters. <a href="https://developer.xero.com/documentation/api/requests-and-responses#get-modified">Examples Here</a>`,
-			},
-			{
-				displayName: 'Invoice Numbers',
-				name: 'invoiceNumbers',
-				type: 'string',
-				typeOptions: {
-					alwaysOpenEditWindow: true,
-				},
-				placeholder: 'INV001,INV002,...',
-				default: '',
-				description: `List of invoice numbers to get`,
 			},
 		],
 	},

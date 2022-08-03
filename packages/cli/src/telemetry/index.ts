@@ -58,6 +58,7 @@ export class Telemetry {
 		this.versionCli = versionCli;
 
 		const enabled = config.get('diagnostics.enabled') as boolean;
+		const logLevel = config.get('logs.level') as boolean;
 		if (enabled) {
 			const conf = config.get('diagnostics.config.backend') as string;
 			const [key, url] = conf.split(';');
@@ -69,7 +70,7 @@ export class Telemetry {
 				return;
 			}
 
-			this.client = new TelemetryClient(key, url);
+			this.client = new TelemetryClient(key, url, { logLevel });
 
 			this.pulseIntervalReference = setInterval(async () => {
 				void this.pulse();
@@ -163,7 +164,7 @@ export class Telemetry {
 		});
 	}
 
-	async identify(traits?: any): Promise<void> {
+	async identify(traits?: IDataObject): Promise<void> {
 		return new Promise<void>((resolve) => {
 			if (this.client) {
 				this.client.identify(
@@ -183,7 +184,7 @@ export class Telemetry {
 		});
 	}
 
-	async track(eventName: string, properties?: any): Promise<void> {
+	async track(eventName: string, properties?: IDataObject): Promise<void> {
 		return new Promise<void>((resolve) => {
 			if (this.client) {
 				this.client.track(

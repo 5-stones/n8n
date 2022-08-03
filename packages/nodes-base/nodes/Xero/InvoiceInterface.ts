@@ -13,7 +13,6 @@ import {
 	TaxAmount?: string;
 	LineAmount?: string;
 	DiscountRate?: string;
-	DiscountAmount?: string;
 	Tracking?: IDataObject[];
 }
 

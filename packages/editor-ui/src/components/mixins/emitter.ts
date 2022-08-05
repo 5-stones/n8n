@@ -23,6 +23,8 @@ export default Vue.extend({
 			let name = parent.$options.name;
 
 			while (parent && (!name || name !== componentName)) {
+				// @ts-ignore
+				// eslint-disable-next-line prefer-spread
 				parent = parent.$parent;
 
 				if (parent) {
